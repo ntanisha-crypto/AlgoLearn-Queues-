@@ -1,0 +1,8 @@
+{
+  "name": "Remix Remix Remix AlgoLearn-Stack",
+  "description": "Interactive Data Structures Learning Platform with drag-and-drop Queue simulations, FIFO operations, priority triage, deques, and stream dispatchers.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
