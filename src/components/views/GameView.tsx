@@ -1031,11 +1031,11 @@ export const GameView: React.FC<GameViewProps> = ({
 
           <div className="flex items-center gap-2 font-mono text-[11px]">
             <span className="text-slate-500 dark:text-slate-400">
-              FRONT: <strong className="text-blue-600 dark:text-blue-400">{frontValue !== null ? frontValue : 'None (-1)'}</strong>
+              FRONT: <strong className="text-indigo-600 dark:text-indigo-400">{frontValue !== null ? frontValue : 'None (-1)'}</strong>
             </span>
             <span className="text-slate-300 dark:text-slate-700">•</span>
             <span className="text-slate-500 dark:text-slate-400">
-              REAR: <strong className="text-indigo-600 dark:text-indigo-400">{rearValue !== null ? rearValue : 'None (-1)'}</strong>
+              REAR: <strong className="text-blue-600 dark:text-blue-400">{rearValue !== null ? rearValue : 'None (-1)'}</strong>
             </span>
           </div>
         </div>
@@ -1085,10 +1085,10 @@ export const GameView: React.FC<GameViewProps> = ({
 
       {/* MODE: ENQUEUE */}
       {currentChallenge?.mode === 'enqueue' && (
-        <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border-2 border-emerald-400/80 dark:border-emerald-600/80 shadow-md space-y-4">
+        <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border-2 border-blue-400/80 dark:border-blue-600/80 shadow-md space-y-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded border border-emerald-300 dark:border-emerald-800">
+              <span className="text-[10px] font-black uppercase tracking-wider text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800">
                 INTERACTIVE DECISION
               </span>
               <span className="text-xs font-bold text-slate-900 dark:text-white">
@@ -1123,15 +1123,15 @@ export const GameView: React.FC<GameViewProps> = ({
                   }}
                   className={`p-3.5 sm:p-4 rounded-xl border-2 transition-all flex items-center justify-between gap-3 text-xs sm:text-sm font-semibold select-none cursor-pointer active:scale-[0.99] ${
                     isCorrectFeedback
-                      ? 'bg-emerald-50 dark:bg-emerald-950/70 border-emerald-400 text-emerald-950 dark:text-emerald-100 shadow-xs ring-2 ring-emerald-300 dark:ring-emerald-800'
+                      ? 'bg-blue-50 dark:bg-blue-950/70 border-blue-400 text-blue-950 dark:text-blue-100 shadow-xs ring-2 ring-blue-300 dark:ring-blue-800'
                       : isIncorrectFeedback
-                      ? 'bg-red-50 dark:bg-red-950/70 border-red-400 text-red-950 dark:text-red-100 ring-2 ring-red-300 dark:ring-red-800'
-                      : 'bg-slate-50 hover:bg-emerald-50/70 dark:bg-slate-800/80 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-emerald-400 text-slate-900 dark:text-white shadow-2xs hover:shadow-xs'
+                      ? 'bg-slate-100 dark:bg-slate-800/80 border-slate-400 text-slate-900 dark:text-slate-100 ring-2 ring-slate-300 dark:ring-slate-700'
+                      : 'bg-slate-50 hover:bg-blue-50/70 dark:bg-slate-800/80 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-blue-400 text-slate-900 dark:text-white shadow-2xs hover:shadow-xs'
                   }`}
                   title="Click to enqueue or drag into the queue chamber"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-mono font-black text-sm flex items-center justify-center shrink-0">
+                    <span className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-mono font-black text-sm flex items-center justify-center shrink-0">
                       {el}
                     </span>
                     <div className="text-left">
@@ -1145,7 +1145,7 @@ export const GameView: React.FC<GameViewProps> = ({
                   </div>
 
                   <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded bg-emerald-100/70 dark:bg-emerald-950 border border-emerald-300 dark:border-emerald-800">
+                    <span className="text-[10px] uppercase font-bold text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded bg-blue-100/70 dark:bg-blue-950 border border-blue-300 dark:border-blue-800">
                       Select →
                     </span>
                   </div>
@@ -1161,14 +1161,14 @@ export const GameView: React.FC<GameViewProps> = ({
         <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-rose-50 dark:bg-rose-950/80 border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+              <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950/80 border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
                 <ArrowUpRight className="w-4 h-4" />
               </div>
               <span className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
                 DEQUEUE FRONT OPERATION (DRAG OUT TO DELETE)
               </span>
             </div>
-            <span className="text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+            <span className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">
               Drag FRONT element out of the box into the Exit/Trash bay to delete, or click any option
             </span>
           </div>
@@ -1188,10 +1188,10 @@ export const GameView: React.FC<GameViewProps> = ({
               disabled={feedbackStatus === 'correct' || activeQueue.length === 0}
             />
 
-            <div className="flex flex-col justify-center gap-3 p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border-2 border-rose-300 dark:border-rose-800">
+            <div className="flex flex-col justify-center gap-3 p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border-2 border-indigo-200 dark:border-indigo-800">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-950 px-2 py-0.5 rounded border border-rose-300 dark:border-rose-800">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950 px-2 py-0.5 rounded border border-indigo-200 dark:border-indigo-800">
                     INTERACTIVE DECISION
                   </span>
                   <span className="text-xs font-bold text-slate-900 dark:text-white">
@@ -1220,13 +1220,13 @@ export const GameView: React.FC<GameViewProps> = ({
                     onClick={() => handleDequeue(candidate.value)}
                     className={`w-full p-3 sm:p-3.5 rounded-xl border-2 transition-all flex items-center justify-between gap-3 text-xs sm:text-sm font-semibold select-none cursor-grab active:cursor-grabbing active:scale-[0.99] ${
                       candidate.isFront
-                        ? 'bg-white hover:bg-rose-50 dark:bg-slate-800 dark:hover:bg-rose-950/40 border-slate-200 dark:border-slate-700 hover:border-rose-400 text-slate-900 dark:text-white shadow-2xs hover:shadow-xs'
+                        ? 'bg-white hover:bg-indigo-50 dark:bg-slate-800 dark:hover:bg-indigo-950/40 border-slate-200 dark:border-slate-700 hover:border-indigo-400 text-slate-900 dark:text-white shadow-2xs hover:shadow-xs'
                         : 'bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 border-slate-200 dark:border-slate-700 hover:border-slate-400 text-slate-800 dark:text-slate-200 shadow-2xs'
                     }`}
                     title="Click to dequeue or drag into the Exit Bay to delete"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-950 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 font-mono font-black text-sm flex items-center justify-center shrink-0">
+                      <span className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 font-mono font-black text-sm flex items-center justify-center shrink-0">
                         {candidate.value}
                       </span>
                       <div className="text-left">
@@ -1240,7 +1240,7 @@ export const GameView: React.FC<GameViewProps> = ({
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0">
-                      <span className="text-[11px] uppercase font-bold text-rose-700 dark:text-rose-300 px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950 border border-rose-200 dark:border-rose-800">
+                      <span className="text-[11px] uppercase font-bold text-indigo-700 dark:text-indigo-300 px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-800">
                         Select / Drag →
                       </span>
                     </div>
@@ -1254,10 +1254,10 @@ export const GameView: React.FC<GameViewProps> = ({
 
       {/* MODE: IDENTIFY FRONT / PEEK */}
       {(currentChallenge?.mode === 'identify_front' || currentChallenge?.mode === 'peek') && (
-        <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border-2 border-rose-400/80 dark:border-rose-600/80 shadow-md space-y-4">
+        <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border-2 border-indigo-400/80 dark:border-indigo-600/80 shadow-md space-y-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-black uppercase tracking-wider text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-950 px-2 py-0.5 rounded border border-rose-300 dark:border-rose-800">
+              <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950 px-2 py-0.5 rounded border border-indigo-200 dark:border-indigo-800">
                 INTERACTIVE IDENTIFICATION
               </span>
               <span className="text-xs font-bold text-slate-900 dark:text-white">
@@ -1275,10 +1275,10 @@ export const GameView: React.FC<GameViewProps> = ({
                 key={`front-opt-${candidate.value}-${idx}`}
                 onClick={() => handleIdentifyFront(candidate.value)}
                 disabled={feedbackStatus === 'correct'}
-                className="p-3.5 sm:p-4 rounded-xl border-2 transition-all flex items-center justify-between gap-3 text-xs sm:text-sm font-semibold select-none cursor-pointer bg-slate-50 hover:bg-rose-50/70 dark:bg-slate-800/80 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-rose-400 text-slate-900 dark:text-white shadow-2xs hover:shadow-xs active:scale-[0.99]"
+                className="p-3.5 sm:p-4 rounded-xl border-2 transition-all flex items-center justify-between gap-3 text-xs sm:text-sm font-semibold select-none cursor-pointer bg-slate-50 hover:bg-indigo-50/70 dark:bg-slate-800/80 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-indigo-400 text-slate-900 dark:text-white shadow-2xs hover:shadow-xs active:scale-[0.99]"
               >
                 <div className="flex items-center gap-3">
-                  <span className="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-950 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 font-mono font-black text-sm flex items-center justify-center shrink-0">
+                  <span className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 font-mono font-black text-sm flex items-center justify-center shrink-0">
                     {candidate.value}
                   </span>
                   <div className="text-left">
@@ -1291,7 +1291,7 @@ export const GameView: React.FC<GameViewProps> = ({
                   </div>
                 </div>
 
-                <span className="text-[10px] uppercase font-bold text-rose-700 dark:text-rose-300 px-2.5 py-1 rounded-lg bg-rose-100/70 dark:bg-rose-950 border border-rose-300 dark:border-rose-800">
+                <span className="text-[10px] uppercase font-bold text-indigo-700 dark:text-indigo-300 px-2.5 py-1 rounded-lg bg-indigo-100/70 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-800">
                   Select →
                 </span>
               </button>
@@ -1302,10 +1302,10 @@ export const GameView: React.FC<GameViewProps> = ({
 
       {/* MODE: IDENTIFY REAR */}
       {currentChallenge?.mode === 'identify_rear' && (
-        <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border-2 border-emerald-400/80 dark:border-emerald-600/80 shadow-md space-y-4">
+        <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border-2 border-blue-400/80 dark:border-blue-600/80 shadow-md space-y-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded border border-emerald-300 dark:border-emerald-800">
+              <span className="text-[10px] font-black uppercase tracking-wider text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800">
                 INTERACTIVE IDENTIFICATION
               </span>
               <span className="text-xs font-bold text-slate-900 dark:text-white">
@@ -1323,10 +1323,10 @@ export const GameView: React.FC<GameViewProps> = ({
                 key={`rear-opt-${candidate.value}-${idx}`}
                 onClick={() => handleIdentifyRear(candidate.value)}
                 disabled={feedbackStatus === 'correct'}
-                className="p-3.5 sm:p-4 rounded-xl border-2 transition-all flex items-center justify-between gap-3 text-xs sm:text-sm font-semibold select-none cursor-pointer bg-slate-50 hover:bg-emerald-50/70 dark:bg-slate-800/80 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-emerald-400 text-slate-900 dark:text-white shadow-2xs hover:shadow-xs active:scale-[0.99]"
+                className="p-3.5 sm:p-4 rounded-xl border-2 transition-all flex items-center justify-between gap-3 text-xs sm:text-sm font-semibold select-none cursor-pointer bg-slate-50 hover:bg-blue-50/70 dark:bg-slate-800/80 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-blue-400 text-slate-900 dark:text-white shadow-2xs hover:shadow-xs active:scale-[0.99]"
               >
                 <div className="flex items-center gap-3">
-                  <span className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-mono font-black text-sm flex items-center justify-center shrink-0">
+                  <span className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-mono font-black text-sm flex items-center justify-center shrink-0">
                     {candidate.value}
                   </span>
                   <div className="text-left">
@@ -1339,7 +1339,7 @@ export const GameView: React.FC<GameViewProps> = ({
                   </div>
                 </div>
 
-                <span className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-300 px-2.5 py-1 rounded-lg bg-emerald-100/70 dark:bg-emerald-950 border border-emerald-300 dark:border-emerald-800">
+                <span className="text-[10px] uppercase font-bold text-blue-700 dark:text-blue-300 px-2.5 py-1 rounded-lg bg-blue-100/70 dark:bg-blue-950 border border-blue-200 dark:border-blue-800">
                   Select →
                 </span>
               </button>
@@ -1424,9 +1424,9 @@ export const GameView: React.FC<GameViewProps> = ({
                   }}
                   className={`p-3.5 sm:p-4 rounded-xl text-left border-2 transition-all flex items-center justify-between gap-3 text-xs sm:text-sm font-semibold select-none cursor-pointer ${
                     isCorrectFeedback
-                      ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-400 text-emerald-950 dark:text-emerald-100 shadow-xs ring-2 ring-emerald-300 dark:ring-emerald-800'
+                      ? 'bg-blue-50 dark:bg-blue-950/70 border-blue-500 text-blue-950 dark:text-blue-100 shadow-xs ring-2 ring-blue-300 dark:ring-blue-800'
                       : isIncorrectFeedback
-                      ? 'bg-red-50 dark:bg-red-950/60 border-red-400 text-red-950 dark:text-red-100'
+                      ? 'bg-slate-100 dark:bg-slate-800/80 border-slate-400 text-slate-900 dark:text-slate-100 ring-2 ring-slate-300 dark:ring-slate-700'
                       : 'bg-slate-50 dark:bg-slate-800/60 hover:bg-blue-50 dark:hover:bg-blue-950/40 border-slate-200 dark:border-slate-700 hover:border-blue-400 text-slate-800 dark:text-slate-200 hover:scale-[1.01]'
                   }`}
                   title="Click option or drag into Answer Drop Zone"
@@ -1441,7 +1441,7 @@ export const GameView: React.FC<GameViewProps> = ({
                           return (
                             <span
                               key={pIdx}
-                              className="inline-flex items-center px-1.5 py-0.5 mx-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700 font-mono font-bold text-xs"
+                              className="inline-flex items-center px-1.5 py-0.5 mx-0.5 rounded bg-blue-50 dark:bg-blue-950/80 text-blue-900 dark:text-blue-200 border border-blue-200 dark:border-blue-800 font-mono font-bold text-xs"
                             >
                               {p}
                             </span>
@@ -1457,10 +1457,10 @@ export const GameView: React.FC<GameViewProps> = ({
                       Click / Drag
                     </span>
                     {isCorrectFeedback && (
-                      <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <CheckCircle2 className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" />
                     )}
                     {isIncorrectFeedback && (
-                      <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
+                      <AlertTriangle className="w-5 h-5 text-slate-500 shrink-0" />
                     )}
                   </div>
                 </div>
@@ -1472,9 +1472,9 @@ export const GameView: React.FC<GameViewProps> = ({
 
       {/* MODE: OVERFLOW TEST (Level 1) */}
       {currentChallenge?.mode === 'overflow' && (
-        <div className="bg-amber-50/70 dark:bg-amber-950/30 p-4 sm:p-5 rounded-2xl border border-amber-200 dark:border-amber-800/80 shadow-xs space-y-3">
-          <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200 font-bold text-xs uppercase tracking-wider">
-            <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+        <div className="bg-slate-100/80 dark:bg-slate-900/60 p-4 sm:p-5 rounded-2xl border border-slate-300 dark:border-slate-700 shadow-xs space-y-3">
+          <div className="flex items-center gap-2 text-slate-900 dark:text-slate-100 font-bold text-xs uppercase tracking-wider font-mono">
+            <AlertTriangle className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             <span>QUEUE OVERFLOW SIMULATION ZONE</span>
           </div>
 
@@ -1485,7 +1485,7 @@ export const GameView: React.FC<GameViewProps> = ({
           <button
             onClick={handleOverflowTrigger}
             disabled={feedbackStatus === 'correct'}
-            className="px-5 py-3 rounded-xl font-mono font-black text-xs uppercase tracking-wide bg-amber-600 hover:bg-amber-700 text-white flex items-center gap-2 transition-all shadow-xs cursor-pointer active:scale-95"
+            className="px-5 py-3 rounded-xl font-mono font-black text-xs uppercase tracking-wide bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white flex items-center gap-2 transition-all shadow-xs cursor-pointer active:scale-95"
           >
             <AlertTriangle className="w-4 h-4" />
             <span>ENQUEUE SURVIVOR [E] (TRIGGER & TEST OVERFLOW)</span>
@@ -1495,9 +1495,9 @@ export const GameView: React.FC<GameViewProps> = ({
 
       {/* MODE: UNDERFLOW TEST (Level 1) */}
       {currentChallenge?.mode === 'underflow' && (
-        <div className="bg-red-50/70 dark:bg-red-950/30 p-4 sm:p-5 rounded-2xl border border-red-200 dark:border-red-800/80 shadow-xs space-y-3">
-          <div className="flex items-center gap-2 text-red-900 dark:text-red-200 font-bold text-xs uppercase tracking-wider">
-            <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
+        <div className="bg-blue-50/60 dark:bg-blue-950/30 p-4 sm:p-5 rounded-2xl border border-blue-200 dark:border-blue-800/80 shadow-xs space-y-3">
+          <div className="flex items-center gap-2 text-blue-900 dark:text-blue-200 font-bold text-xs uppercase tracking-wider font-mono">
+            <AlertTriangle className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
             <span>QUEUE UNDERFLOW SIMULATION ZONE</span>
           </div>
 
@@ -1508,7 +1508,7 @@ export const GameView: React.FC<GameViewProps> = ({
           <button
             onClick={handleUnderflowTrigger}
             disabled={feedbackStatus === 'correct'}
-            className="px-5 py-3 rounded-xl font-mono font-black text-xs uppercase tracking-wide bg-red-600 hover:bg-red-700 text-white flex items-center gap-2 transition-all shadow-xs cursor-pointer active:scale-95"
+            className="px-5 py-3 rounded-xl font-mono font-black text-xs uppercase tracking-wide bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2 transition-all shadow-xs cursor-pointer active:scale-95"
           >
             <AlertTriangle className="w-4 h-4" />
             <span>DEQUEUE EMPTY QUEUE (TRIGGER & TEST UNDERFLOW)</span>

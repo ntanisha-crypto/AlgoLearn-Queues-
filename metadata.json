@@ -1,5 +1,5 @@
 {
-  "name": "Remix Remix Remix AlgoLearn-Stack",
+  "name": "AlgoLearn - Queue Master",
   "description": "Interactive Data Structures Learning Platform with drag-and-drop Queue simulations, FIFO operations, priority triage, deques, and stream dispatchers.",
   "requestFramePermissions": [],
   "majorCapabilities": [

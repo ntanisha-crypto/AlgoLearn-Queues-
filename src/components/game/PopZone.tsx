@@ -86,9 +86,9 @@ export const PopZone: React.FC<PopZoneProps> = ({
           disabled
             ? 'opacity-50 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40'
             : dragState === 'valid'
-            ? 'border-emerald-500 bg-emerald-50/90 dark:bg-emerald-950/80 ring-4 ring-emerald-200 dark:ring-emerald-900 scale-102'
+            ? 'border-indigo-500 bg-indigo-50/90 dark:bg-indigo-950/80 ring-4 ring-indigo-200 dark:ring-indigo-900 scale-102'
             : dragState === 'invalid'
-            ? 'border-red-500 bg-red-50/90 dark:bg-red-950/80 ring-4 ring-red-200 dark:ring-red-900'
+            ? 'border-slate-400 bg-slate-100 dark:bg-slate-800 ring-4 ring-slate-200 dark:ring-slate-700'
             : isGuidedSolveActive
             ? 'border-blue-500 bg-blue-50/60 dark:bg-blue-950/60 ring-4 ring-blue-200 dark:ring-blue-900 animate-pulse'
             : 'border-slate-300 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/50 hover:border-blue-400 dark:hover:border-blue-500'
@@ -100,21 +100,21 @@ export const PopZone: React.FC<PopZoneProps> = ({
               initial={{ scale: 0.5, opacity: 0 }}
               animate={{ scale: 1.1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
-              className="flex flex-col items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold"
+              className="flex flex-col items-center gap-2 text-indigo-600 dark:text-indigo-400 font-bold"
             >
-              <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-300 flex items-center justify-center shadow-sm">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 flex items-center justify-center shadow-sm">
                 <Sparkles className="w-6 h-6 animate-spin" />
               </div>
               <span className="text-sm font-mono font-black">
                 POPPED [{justPopped}]
               </span>
-              <span className="text-[11px] text-emerald-700 dark:text-emerald-300 font-semibold">
+              <span className="text-[11px] text-indigo-700 dark:text-indigo-300 font-semibold">
                 LIFO Removal Executed!
               </span>
             </motion.div>
           ) : dragState === 'valid' ? (
-            <div className="flex flex-col items-center gap-2 text-emerald-700 dark:text-emerald-300 font-bold">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shadow-xs">
+            <div className="flex flex-col items-center gap-2 text-indigo-700 dark:text-indigo-300 font-bold">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 flex items-center justify-center shadow-xs">
                 <CheckCircle2 className="w-6 h-6" />
               </div>
               <span className="text-sm font-extrabold uppercase tracking-wide">
@@ -125,8 +125,8 @@ export const PopZone: React.FC<PopZoneProps> = ({
               </span>
             </div>
           ) : dragState === 'invalid' ? (
-            <div className="flex flex-col items-center gap-2 text-red-700 dark:text-red-300 font-bold">
-              <div className="w-12 h-12 rounded-2xl bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 flex items-center justify-center shadow-xs">
+            <div className="flex flex-col items-center gap-2 text-slate-700 dark:text-slate-300 font-bold">
+              <div className="w-12 h-12 rounded-2xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center shadow-xs">
                 <AlertTriangle className="w-6 h-6" />
               </div>
               <span className="text-sm font-extrabold uppercase tracking-wide">
@@ -160,7 +160,7 @@ export const PopZone: React.FC<PopZoneProps> = ({
       {topElementValue !== null && !disabled && (
         <button
           onClick={handleClickPop}
-          className="w-full py-2.5 px-4 rounded-xl bg-red-50 hover:bg-red-100 dark:bg-red-950/50 dark:hover:bg-red-900/60 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs"
+          className="w-full py-2.5 px-4 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs"
         >
           <Trash2 className="w-4 h-4" />
           <span>Click to POP Top [{topElementValue}]</span>

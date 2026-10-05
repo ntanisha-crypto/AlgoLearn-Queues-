@@ -34,14 +34,14 @@ export const LevelSpeedQueueInteractive: React.FC<LevelSpeedQueueInteractiveProp
   onScoreReward,
 }) => {
   const [buffer, setBuffer] = useState<Packet[]>([
-    { id: 'pkt-1', name: 'PKT-101', dataSize: '64 KB', color: 'from-blue-500 to-indigo-600' },
-    { id: 'pkt-2', name: 'PKT-102', dataSize: '128 KB', color: 'from-purple-500 to-pink-600' },
+    { id: 'pkt-1', name: 'PKT-101', dataSize: '64 KB', color: 'from-blue-600 to-indigo-700' },
+    { id: 'pkt-2', name: 'PKT-102', dataSize: '128 KB', color: 'from-indigo-600 to-blue-700' },
   ]);
 
   const [incomingPackets, setIncomingPackets] = useState<Packet[]>([
-    { id: 'in-1', name: 'PKT-103', dataSize: '256 KB', color: 'from-emerald-500 to-teal-600' },
-    { id: 'in-2', name: 'PKT-104', dataSize: '64 KB', color: 'from-amber-500 to-orange-600' },
-    { id: 'in-3', name: 'PKT-105', dataSize: '512 KB', color: 'from-cyan-500 to-blue-600' },
+    { id: 'in-1', name: 'PKT-103', dataSize: '256 KB', color: 'from-blue-700 to-indigo-800' },
+    { id: 'in-2', name: 'PKT-104', dataSize: '64 KB', color: 'from-sky-600 to-blue-700' },
+    { id: 'in-3', name: 'PKT-105', dataSize: '512 KB', color: 'from-indigo-700 to-slate-800' },
   ]);
 
   const [dispatchedCount, setDispatchedCount] = useState<number>(0);
@@ -78,7 +78,7 @@ export const LevelSpeedQueueInteractive: React.FC<LevelSpeedQueueInteractiveProp
       id: `in-${newId}`,
       name: randomName,
       dataSize: `${Math.pow(2, Math.floor(Math.random() * 4) + 6)} KB`,
-      color: 'from-indigo-500 to-purple-600',
+      color: 'from-indigo-600 to-blue-700',
     };
 
     setTimeout(() => {
@@ -118,13 +118,13 @@ export const LevelSpeedQueueInteractive: React.FC<LevelSpeedQueueInteractiveProp
   const handleReset = () => {
     soundEffects.playClick();
     setBuffer([
-      { id: 'pkt-1', name: 'PKT-101', dataSize: '64 KB', color: 'from-blue-500 to-indigo-600' },
-      { id: 'pkt-2', name: 'PKT-102', dataSize: '128 KB', color: 'from-purple-500 to-pink-600' },
+      { id: 'pkt-1', name: 'PKT-101', dataSize: '64 KB', color: 'from-blue-600 to-indigo-700' },
+      { id: 'pkt-2', name: 'PKT-102', dataSize: '128 KB', color: 'from-indigo-600 to-blue-700' },
     ]);
     setIncomingPackets([
-      { id: 'in-1', name: 'PKT-103', dataSize: '256 KB', color: 'from-emerald-500 to-teal-600' },
-      { id: 'in-2', name: 'PKT-104', dataSize: '64 KB', color: 'from-amber-500 to-orange-600' },
-      { id: 'in-3', name: 'PKT-105', dataSize: '512 KB', color: 'from-cyan-500 to-blue-600' },
+      { id: 'in-1', name: 'PKT-103', dataSize: '256 KB', color: 'from-blue-700 to-indigo-800' },
+      { id: 'in-2', name: 'PKT-104', dataSize: '64 KB', color: 'from-sky-600 to-blue-700' },
+      { id: 'in-3', name: 'PKT-105', dataSize: '512 KB', color: 'from-indigo-700 to-slate-800' },
     ]);
     setCombo(1);
     setScore(0);
@@ -137,13 +137,13 @@ export const LevelSpeedQueueInteractive: React.FC<LevelSpeedQueueInteractiveProp
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/80 border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 flex items-center justify-center">
             <Radio className="w-4 h-4" />
           </div>
           <div>
             <h3 className="text-sm font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
               LEVEL 4: HIGH-THROUGHPUT PACKET DISPATCHER
-              <span className="text-[10px] font-mono uppercase bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full font-bold">
+              <span className="text-[10px] font-mono uppercase bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full font-bold">
                 Real-Time FIFO Buffer
               </span>
             </h3>
@@ -160,12 +160,12 @@ export const LevelSpeedQueueInteractive: React.FC<LevelSpeedQueueInteractiveProp
             <span>Transmitted: {dispatchedCount}</span>
           </div>
 
-          <div className="px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 flex items-center gap-1.5 font-bold">
+          <div className="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5 font-bold">
             <Flame className="w-3.5 h-3.5" />
             <span>Combo: {combo}x</span>
           </div>
 
-          <div className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5 font-bold">
+          <div className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 flex items-center gap-1.5 font-bold">
             <Zap className="w-3.5 h-3.5" />
             <span>XP: {score}</span>
           </div>
@@ -175,7 +175,7 @@ export const LevelSpeedQueueInteractive: React.FC<LevelSpeedQueueInteractiveProp
       {/* Message bar */}
       <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-800 dark:text-slate-200 flex items-center justify-between gap-2">
         <span className="flex items-center gap-2 truncate">
-          <Wifi className="w-4 h-4 text-emerald-500 shrink-0" />
+          <Wifi className="w-4 h-4 text-blue-500 shrink-0" />
           {lastMessage}
         </span>
         <button
@@ -212,14 +212,14 @@ export const LevelSpeedQueueInteractive: React.FC<LevelSpeedQueueInteractiveProp
           onClick={handleDispatchFront}
           className={`lg:col-span-3 rounded-2xl border-2 border-dashed p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all select-none ${
             isOverExit
-              ? 'border-emerald-500 bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-200 ring-4 ring-emerald-300 dark:ring-emerald-800 scale-102 shadow-lg'
-              : 'border-slate-300 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-900/50 hover:border-emerald-500 text-slate-600 dark:text-slate-300'
+              ? 'border-indigo-500 bg-indigo-100 dark:bg-indigo-950/80 text-indigo-800 dark:text-indigo-200 ring-4 ring-indigo-300 dark:ring-indigo-800 scale-102 shadow-lg'
+              : 'border-slate-300 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-900/50 hover:border-indigo-500 text-slate-600 dark:text-slate-300'
           }`}
         >
-          <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2 shadow-xs">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-2 shadow-xs">
             <Radio className="w-6 h-6 animate-pulse" />
           </div>
-          <span className="text-xs font-black uppercase text-emerald-600 dark:text-emerald-400">
+          <span className="text-xs font-black uppercase text-indigo-600 dark:text-indigo-400">
             TRANSMIT ANTENNA
           </span>
           <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 leading-tight">
@@ -249,16 +249,16 @@ export const LevelSpeedQueueInteractive: React.FC<LevelSpeedQueueInteractiveProp
           }}
           className={`lg:col-span-6 rounded-2xl border-2 p-3.5 flex flex-col justify-between transition-all relative overflow-hidden ${
             buffer.length >= BUFFER_CAPACITY
-              ? 'border-rose-400 dark:border-rose-600 bg-rose-50/20 dark:bg-rose-950/20 ring-4 ring-rose-200 dark:ring-rose-900'
+              ? 'border-slate-400 dark:border-slate-600 bg-slate-100/40 dark:bg-slate-800/40 ring-4 ring-slate-200 dark:ring-slate-700'
               : isOverBuffer
               ? 'border-blue-500 bg-blue-50/40 dark:bg-blue-950/40 ring-4 ring-blue-200 dark:ring-blue-800'
               : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30'
           }`}
         >
           <div className="flex items-center justify-between text-[11px] font-mono text-slate-500 dark:text-slate-400 mb-2">
-            <span className="text-rose-600 dark:text-rose-400 font-bold">← FRONT (Next Transmit)</span>
+            <span className="text-indigo-600 dark:text-indigo-400 font-bold">← FRONT (Next Transmit)</span>
             <span className="font-bold">FIFO BUFFER: {buffer.length} / {BUFFER_CAPACITY}</span>
-            <span className="text-emerald-600 dark:text-emerald-400 font-bold">REAR (Drop Arrivals) →</span>
+            <span className="text-blue-600 dark:text-blue-400 font-bold">REAR (Drop Arrivals) →</span>
           </div>
 
           <div className="flex items-center justify-center gap-2 overflow-x-auto py-2 min-h-[95px]">
@@ -285,7 +285,7 @@ export const LevelSpeedQueueInteractive: React.FC<LevelSpeedQueueInteractiveProp
                       }}
                       className={`px-3 py-2 rounded-xl border-2 font-mono flex flex-col items-center justify-center text-center shrink-0 select-none shadow-xs transition-transform ${
                         isFront
-                          ? 'border-rose-500 bg-rose-50 dark:bg-rose-950/70 text-rose-950 dark:text-rose-100 ring-2 ring-rose-200 dark:ring-rose-800 cursor-grab active:cursor-grabbing hover:scale-105'
+                          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/70 text-indigo-950 dark:text-indigo-100 ring-2 ring-indigo-200 dark:ring-indigo-800 cursor-grab active:cursor-grabbing hover:scale-105'
                           : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200'
                       }`}
                     >
@@ -310,7 +310,7 @@ export const LevelSpeedQueueInteractive: React.FC<LevelSpeedQueueInteractiveProp
         <div className="lg:col-span-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 p-3 flex flex-col justify-between space-y-2">
           <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
             <span>INCOMING FEED</span>
-            <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-black animate-pulse">
+            <span className="text-[10px] font-mono text-blue-600 dark:text-blue-400 font-black">
               LIVE ●
             </span>
           </div>
@@ -327,13 +327,13 @@ export const LevelSpeedQueueInteractive: React.FC<LevelSpeedQueueInteractiveProp
                   );
                 }}
                 onClick={() => handleEnqueuePacket(pkt)}
-                className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs flex items-center justify-between cursor-grab active:cursor-grabbing hover:border-emerald-400 transition-all text-xs font-mono"
+                className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs flex items-center justify-between cursor-grab active:cursor-grabbing hover:border-blue-400 transition-all text-xs font-mono"
               >
                 <div>
                   <span className="font-bold text-slate-800 dark:text-slate-200">{pkt.name}</span>
                   <span className="text-[10px] text-slate-400 ml-1.5">{pkt.dataSize}</span>
                 </div>
-                <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 uppercase bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded">
+                <span className="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 rounded">
                   Drag in
                 </span>
               </div>
