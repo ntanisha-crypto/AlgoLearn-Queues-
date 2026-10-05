@@ -1,7 +1,8 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, ArrowRight, AlertCircle, Eye, LogIn, LogOut, Trash2, Sparkles } from 'lucide-react';
 import { StackItem } from '../../types';
+import { soundEffects } from '../../services/sound';
 
 export interface QueueVisualizerItem {
   id: string;
@@ -22,6 +23,7 @@ interface QueueVisualizerProps {
   onDropItem?: (value: number | string) => void;
   onDequeueFront?: (value?: number | string) => void;
   onInvalidDequeueAttempt?: (value: number | string) => void;
+  onInvalidEnqueueAttempt?: (reason?: string) => void;
   onElementClick?: (value: number | string, index: number) => void;
   allowDragDequeue?: boolean;
   customEmptyMessage?: string;
@@ -40,16 +42,29 @@ export const QueueVisualizer: React.FC<QueueVisualizerProps> = ({
   onDropItem,
   onDequeueFront,
   onInvalidDequeueAttempt,
+  onInvalidEnqueueAttempt,
   onElementClick,
   allowDragDequeue = true,
   customEmptyMessage,
   bunkerLabel = 'BUNKER QUEUE',
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [inspectedIndex, setInspectedIndex] = React.useState<number | null>(null);
-  const [isDraggingFront, setIsDraggingFront] = React.useState<boolean>(false);
-  const [isOverExitChute, setIsOverExitChute] = React.useState<boolean>(false);
-  const [isDraggingOverChamber, setIsDraggingOverChamber] = React.useState<boolean>(false);
+  const [inspectedIndex, setInspectedIndex] = useState<number | null>(null);
+  const [isDraggingFront, setIsDraggingFront] = useState<boolean>(false);
+  const [isOverExitChute, setIsOverExitChute] = useState<boolean>(false);
+  const [isDraggingOverChamber, setIsDraggingOverChamber] = useState<boolean>(false);
+  const [isOverRearSlot, setIsOverRearSlot] = useState<boolean>(false);
+  const [invalidEnqueueNote, setInvalidEnqueueNote] = useState<string | null>(null);
+
+  const showInvalidEnqueueMessage = (location: string) => {
+    const msg = `Note: Element can only be inserted through the REAR position! (Cannot insert at ${location})`;
+    setInvalidEnqueueNote(msg);
+    soundEffects.playError();
+    onInvalidEnqueueAttempt?.(msg);
+    setTimeout(() => {
+      setInvalidEnqueueNote((curr) => (curr === msg ? null : curr));
+    }, 4500);
+  };
 
   const normalizedItems = items.map((item, idx) => {
     if (typeof item === 'object' && item !== null && 'value' in item) {
@@ -97,16 +112,16 @@ export const QueueVisualizer: React.FC<QueueVisualizerProps> = ({
         onInvalidDequeueAttempt?.(parsed.value);
         return;
       }
-      if (parsed.type === 'ENQUEUE' || parsed.type === 'PUSH') {
-        onDropItem?.(parsed.value !== undefined ? parsed.value : parsed);
+      if (parsed.type === 'ENQUEUE' || parsed.type === 'PUSH' || parsed.value !== undefined) {
+        showInvalidEnqueueMessage('outside the queue. Please drag specifically into the REAR slot');
         return;
       }
     } catch {
       // Fallback
       if (raw === String(frontItem?.value)) {
         onDequeueFront?.(raw);
-      } else if (onDropItem) {
-        onDropItem(raw);
+      } else {
+        showInvalidEnqueueMessage('outside the queue. Please drag specifically into the REAR slot');
       }
     }
   };
@@ -120,37 +135,63 @@ export const QueueVisualizer: React.FC<QueueVisualizerProps> = ({
   };
 
   const handleChamberDragLeave = (e: React.DragEvent) => {
-    // Only reset if actually leaving the chamber
     const currentTarget = e.currentTarget as HTMLElement;
     if (!currentTarget.contains(e.relatedTarget as Node)) {
       setIsDraggingOverChamber(false);
     }
   };
 
+  // Chamber drop: drops on general chamber background outside the REAR slot are invalid!
   const handleChamberDrop = (e: React.DragEvent) => {
+    // If dropped directly on the rear slot, the rear slot handler takes it
+    const isTargetRearSlot = (e.target as HTMLElement)?.closest('#rear-drop-slot');
+    if (isTargetRearSlot) return;
+
     e.preventDefault();
     e.stopPropagation();
     setIsDraggingOverChamber(false);
+
     const data = e.dataTransfer.getData('application/json') || e.dataTransfer.getData('text/plain');
-    if (data) {
-      try {
-        const parsed = JSON.parse(data);
-        if (parsed.type === 'DEQUEUE') {
-          onDequeueFront?.(parsed.value);
-          return;
-        }
-        if (parsed.type === 'DEQUEUE_INVALID') {
-          onInvalidDequeueAttempt?.(parsed.value);
-          return;
-        }
-        if (onDropItem) {
-          onDropItem(parsed.value !== undefined ? parsed.value : parsed);
-        }
-      } catch {
-        if (onDropItem) {
-          onDropItem(data);
-        }
+    if (!data) return;
+
+    try {
+      const parsed = JSON.parse(data);
+      if (parsed.type === 'DEQUEUE') {
+        onDequeueFront?.(parsed.value);
+        return;
       }
+      if (parsed.type === 'DEQUEUE_INVALID') {
+        onInvalidDequeueAttempt?.(parsed.value);
+        return;
+      }
+
+      showInvalidEnqueueMessage('the chamber body. Elements can only be inserted through the REAR position at the tail!');
+    } catch {
+      showInvalidEnqueueMessage('the chamber body. Elements can only be inserted through the REAR position at the tail!');
+    }
+  };
+
+  // Dedicated REAR Slot drop handler: the ONLY valid insertion point when queue has items
+  const handleRearSlotDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsOverRearSlot(false);
+    setIsDraggingOverChamber(false);
+
+    const data = e.dataTransfer.getData('application/json') || e.dataTransfer.getData('text/plain');
+    if (!data) return;
+
+    try {
+      const parsed = JSON.parse(data);
+      if (parsed.type === 'DEQUEUE' || parsed.type === 'DEQUEUE_INVALID') {
+        soundEffects.playError();
+        return;
+      }
+      setInvalidEnqueueNote(null);
+      onDropItem?.(parsed.value !== undefined ? parsed.value : parsed);
+    } catch {
+      setInvalidEnqueueNote(null);
+      onDropItem?.(data);
     }
   };
 
@@ -178,6 +219,29 @@ export const QueueVisualizer: React.FC<QueueVisualizerProps> = ({
           >
             <Trash2 className="w-4 h-4 shrink-0" />
             <span>Drop onto the Exit Chute / Trash Bay (or release outside) to DEQUEUE {frontItem ? `[${frontItem.value}]` : ''}!</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Dynamic Invalid Enqueue Warning Note */}
+      <AnimatePresence>
+        {invalidEnqueueNote && (
+          <motion.div
+            initial={{ opacity: 0, y: -8, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.98 }}
+            className="w-full p-2.5 rounded-xl bg-slate-900 text-white dark:bg-slate-800 dark:text-white border-2 border-indigo-500 text-xs font-bold flex items-center justify-between gap-2 shadow-lg z-30"
+          >
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-indigo-400 shrink-0" />
+              <span>{invalidEnqueueNote}</span>
+            </div>
+            <button
+              onClick={() => setInvalidEnqueueNote(null)}
+              className="text-xs font-mono font-bold px-1.5 py-0.5 rounded opacity-75 hover:opacity-100 cursor-pointer"
+            >
+              ✕
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -275,15 +339,26 @@ export const QueueVisualizer: React.FC<QueueVisualizerProps> = ({
                   onInvalidDequeueAttempt?.(parsed.value);
                   return;
                 }
-                onDequeueFront?.(parsed.value);
+                if (parsed.type === 'DEQUEUE') {
+                  onDequeueFront?.(parsed.value);
+                  return;
+                }
+                if (parsed.type === 'ENQUEUE' || parsed.type === 'PUSH' || parsed.value !== undefined) {
+                  showInvalidEnqueueMessage('the Exit Chute (it is for departures only)');
+                  return;
+                }
+              } catch {
+                if (raw === String(frontItem?.value)) {
+                  onDequeueFront?.(raw);
+                  return;
+                }
+                showInvalidEnqueueMessage('the Exit Chute (it is for departures only)');
                 return;
-              } catch {}
+              }
             }
-            onDequeueFront?.(raw);
           }}
-          onClick={() => onDequeueFront?.()}
-          title="Drag the FRONT element here or click to DEQUEUE"
-          className={`shrink-0 w-full sm:w-32 rounded-2xl border-2 border-dashed p-3 flex sm:flex-col items-center justify-center text-center gap-2 transition-all cursor-pointer select-none ${
+          title="Drag the FRONT element here to DEQUEUE"
+          className={`shrink-0 w-full sm:w-32 rounded-2xl border-2 border-dashed p-3 flex sm:flex-col items-center justify-center text-center gap-2 transition-all select-none ${
             isOverExitChute
               ? 'border-indigo-500 bg-indigo-100 dark:bg-indigo-900/80 text-indigo-900 dark:text-indigo-100 ring-4 ring-indigo-300 dark:ring-indigo-700 scale-105 shadow-xl'
               : isDraggingFront
@@ -332,27 +407,51 @@ export const QueueVisualizer: React.FC<QueueVisualizerProps> = ({
           </div>
 
         {isEmpty ? (
-          <div
-            onDragOver={(e) => {
-              e.preventDefault();
-              e.dataTransfer.dropEffect = 'copy';
-              if (!isDraggingOverChamber) setIsDraggingOverChamber(true);
-            }}
-            onDrop={handleChamberDrop}
-            className={`py-8 text-center flex flex-col items-center justify-center space-y-1.5 border-2 border-dashed rounded-xl transition-all cursor-pointer ${
-              isDraggingOverChamber
-                ? 'border-blue-500 bg-blue-100/80 dark:bg-blue-950/70 ring-4 ring-blue-300 dark:ring-blue-700'
-                : 'border-slate-300 dark:border-slate-700 bg-white/50 dark:bg-slate-900/50 hover:border-blue-400'
-            }`}
-          >
-            <div className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
-              <AlertCircle className="w-5 h-5" />
+          <div className="py-6 px-4 text-center flex flex-col items-center justify-center space-y-2.5">
+            <div
+              id="rear-drop-slot"
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                e.dataTransfer.dropEffect = 'copy';
+                if (!isOverRearSlot) setIsOverRearSlot(true);
+              }}
+              onDragEnter={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!isOverRearSlot) setIsOverRearSlot(true);
+              }}
+              onDragLeave={(e) => {
+                const currentTarget = e.currentTarget as HTMLElement;
+                if (!currentTarget.contains(e.relatedTarget as Node)) {
+                  setIsOverRearSlot(false);
+                }
+              }}
+              onDrop={handleRearSlotDrop}
+              className={`w-44 h-28 sm:w-52 sm:h-32 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center p-3 font-mono text-center transition-all select-none cursor-pointer ${
+                isOverRearSlot
+                  ? 'border-blue-500 bg-blue-100/90 dark:bg-blue-950/80 text-blue-800 dark:text-blue-200 ring-4 ring-blue-300 dark:ring-blue-700 scale-105 shadow-md animate-pulse'
+                  : highlightRear
+                  ? 'border-blue-400 dark:border-blue-500 bg-blue-50/70 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 ring-4 ring-blue-200 dark:ring-blue-900/60 animate-pulse'
+                  : 'border-blue-300 dark:border-blue-700/80 bg-blue-50/30 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 hover:border-blue-400'
+              }`}
+            >
+              <div className="flex items-center gap-1 text-[11px] font-black uppercase text-blue-700 dark:text-blue-300">
+                <LogIn className="w-3.5 h-3.5" />
+                <span>REAR POSITION [0]</span>
+              </div>
+              <div className="w-8 h-8 rounded-xl bg-blue-100/80 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 flex items-center justify-center my-1.5">
+                <LogIn className="w-4 h-4" />
+              </div>
+              <span className="text-[10px] font-extrabold uppercase tracking-tight text-blue-700 dark:text-blue-300">
+                DROP HERE TO ENQUEUE
+              </span>
+              <span className="text-[9px] text-slate-500 dark:text-slate-400">
+                Initial Insertion Point (FIFO)
+              </span>
             </div>
-            <p className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-              QUEUE IS EMPTY
-            </p>
-            <p className="text-xs text-slate-400 dark:text-slate-500">
-              {customEmptyMessage || 'Drag and drop or select an element to ENQUEUE at REAR.'}
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+              {customEmptyMessage || 'Drag and drop an element into the REAR position [0] to enqueue.'}
             </p>
           </div>
         ) : (
@@ -431,6 +530,22 @@ export const QueueVisualizer: React.FC<QueueVisualizerProps> = ({
                       onDragEnd={() => {
                         setIsDraggingFront(false);
                       }}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const raw = e.dataTransfer.getData('application/json') || e.dataTransfer.getData('text/plain');
+                        if (raw) {
+                          showInvalidEnqueueMessage(
+                            index === 0
+                              ? 'the FRONT position! Queues follow FIFO: new elements cannot cut in at the front'
+                              : `position [${index}] in the middle! Elements can ONLY enter at the REAR`
+                          );
+                        }
+                      }}
                       className={`relative w-16 h-20 sm:w-20 sm:h-24 rounded-2xl border-2 flex flex-col items-center justify-between p-2 font-mono shadow-xs shrink-0 transition-all select-none cursor-pointer ${
                         isPeeked
                           ? 'border-indigo-600 dark:border-indigo-400 bg-indigo-50/95 dark:bg-indigo-950/90 text-indigo-950 dark:text-indigo-100 ring-4 ring-indigo-400/50 dark:ring-indigo-500/50 shadow-lg shadow-indigo-500/25 z-10'
@@ -493,13 +608,25 @@ export const QueueVisualizer: React.FC<QueueVisualizerProps> = ({
               {/* If queue is not full, show next REAR insertion target slot */}
               {!isFull && (
                 <div
+                  id="rear-drop-slot"
                   onDragOver={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     e.dataTransfer.dropEffect = 'copy';
-                    if (!isDraggingOverChamber) setIsDraggingOverChamber(true);
+                    if (!isOverRearSlot) setIsOverRearSlot(true);
                   }}
-                  onDrop={handleChamberDrop}
+                  onDragEnter={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (!isOverRearSlot) setIsOverRearSlot(true);
+                  }}
+                  onDragLeave={(e) => {
+                    const currentTarget = e.currentTarget as HTMLElement;
+                    if (!currentTarget.contains(e.relatedTarget as Node)) {
+                      setIsOverRearSlot(false);
+                    }
+                  }}
+                  onDrop={handleRearSlotDrop}
                   className="flex items-center gap-2 shrink-0 cursor-pointer"
                 >
                   {normalizedItems.length > 0 && (
@@ -508,20 +635,22 @@ export const QueueVisualizer: React.FC<QueueVisualizerProps> = ({
                     </div>
                   )}
                   <div
-                    className={`relative w-16 h-20 sm:w-20 sm:h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-between p-2 font-mono text-center transition-all select-none ${
-                      isDraggingOverChamber
-                        ? 'border-blue-500 bg-blue-100/90 dark:bg-blue-950/80 text-blue-800 dark:text-blue-200 ring-4 ring-blue-300 dark:ring-blue-700 scale-105 shadow-md'
+                    className={`relative w-18 h-22 sm:w-22 sm:h-26 rounded-2xl border-2 border-dashed flex flex-col items-center justify-between p-2 font-mono text-center transition-all select-none ${
+                      isOverRearSlot
+                        ? 'border-blue-500 bg-blue-100/90 dark:bg-blue-950/80 text-blue-800 dark:text-blue-200 ring-4 ring-blue-300 dark:ring-blue-700 scale-105 shadow-md animate-pulse'
+                        : highlightRear
+                        ? 'border-blue-400 dark:border-blue-500 bg-blue-50/60 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 ring-4 ring-blue-200 dark:ring-blue-900/60 animate-pulse'
                         : 'border-blue-300/80 dark:border-blue-700/60 bg-blue-50/30 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 hover:border-blue-400 hover:bg-blue-50/60'
                     }`}
                   >
-                    <div className="w-full flex items-center justify-center text-[9px] font-black uppercase text-blue-600 dark:text-blue-400">
+                    <div className="w-full flex items-center justify-center text-[10px] font-black uppercase text-blue-600 dark:text-blue-400">
                       REAR
                     </div>
                     <div className="w-8 h-8 rounded-xl bg-blue-100/80 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 flex items-center justify-center my-auto">
                       <LogIn className="w-4 h-4" />
                     </div>
-                    <div className="text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase">
-                      Drop Target
+                    <div className="text-[8px] font-black text-blue-700 dark:text-blue-300 uppercase tracking-tight">
+                      Drop to Enqueue
                     </div>
                   </div>
                 </div>

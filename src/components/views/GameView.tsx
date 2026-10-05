@@ -39,6 +39,9 @@ import {
   ChevronDown,
   ChevronUp,
   Trash2,
+  GripVertical,
+  Target,
+  LogIn,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -480,6 +483,20 @@ export const GameView: React.FC<GameViewProps> = ({
       );
       setFeedbackLifoReason('The REAR pointer always tracks the newest arrival at the end of the line.');
     }
+  };
+
+  // INVALID ENQUEUE ATTEMPT HANDLER
+  const handleInvalidEnqueue = (reason?: string) => {
+    soundEffects.playError();
+    setMistakes((m) => m + 1);
+    setFeedbackStatus('incorrect');
+    setFeedbackTitle('FIFO Enqueue Rule');
+    setFeedbackActionText(
+      reason || 'Note: Element can only be inserted through the REAR position!'
+    );
+    setFeedbackLifoReason(
+      'In a FIFO (First-In, First-Out) Queue, new elements can strictly only enter at the REAR pointer. Middle and front insertions are forbidden.'
+    );
   };
 
   // 3. PEEK OPERATION
@@ -1006,13 +1023,13 @@ export const GameView: React.FC<GameViewProps> = ({
                 setFeedbackLifoReason('In standard FIFO queues, items in the middle or rear must wait for front elements to be dequeued.');
                 return;
               }
-              if (parsed.type === 'ENQUEUE' || parsed.type === 'PUSH') {
-                handleEnqueue(parsed.value, parsed.index);
+              if (parsed.type === 'ENQUEUE' || parsed.type === 'PUSH' || parsed.value !== undefined) {
+                handleInvalidEnqueue('Note: Element can only be inserted through the REAR position! (Cannot insert outside the queue)');
                 return;
               }
             } catch {
               if (currentChallenge?.mode === 'enqueue') {
-                handleEnqueue(raw);
+                handleInvalidEnqueue('Note: Element can only be inserted through the REAR position!');
               }
             }
           }
@@ -1051,6 +1068,7 @@ export const GameView: React.FC<GameViewProps> = ({
           overflowWarning={currentChallenge?.mode === 'overflow'}
           underflowWarning={currentChallenge?.mode === 'underflow'}
           onDropItem={(val) => handleEnqueue(val)}
+          onInvalidEnqueueAttempt={handleInvalidEnqueue}
           onDequeueFront={(val) => {
             if (currentChallenge?.mode === 'dequeue') {
               handleDequeue(val);
@@ -1089,14 +1107,14 @@ export const GameView: React.FC<GameViewProps> = ({
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-black uppercase tracking-wider text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800">
-                INTERACTIVE DECISION
+                INCOMING ARRIVALS BAY (DRAG & DROP TO ENQUEUE)
               </span>
               <span className="text-xs font-bold text-slate-900 dark:text-white">
-                Which element should be enqueued next at the REAR?
+                Drag incoming element to the REAR position in the Bunker Queue above
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Select the correct incoming arrival in chronological sequence, or drag it into the queue:
+              In a FIFO Queue, elements can strictly only enter at the REAR pointer. Drag the arrival into the REAR entry slot:
             </p>
           </div>
 
@@ -1117,36 +1135,39 @@ export const GameView: React.FC<GameViewProps> = ({
                   }}
                   onClick={() => {
                     if (feedbackStatus !== 'correct') {
-                      setSelectedEnqueueValue(el);
-                      handleEnqueue(el, idx);
+                      handleInvalidEnqueue('Note: Element cannot be clicked to insert. It can only be inserted by dragging to the REAR position!');
                     }
                   }}
-                  className={`p-3.5 sm:p-4 rounded-xl border-2 transition-all flex items-center justify-between gap-3 text-xs sm:text-sm font-semibold select-none cursor-pointer active:scale-[0.99] ${
+                  className={`p-3.5 sm:p-4 rounded-xl border-2 transition-all flex items-center justify-between gap-3 text-xs sm:text-sm font-semibold select-none cursor-grab active:cursor-grabbing ${
                     isCorrectFeedback
                       ? 'bg-blue-50 dark:bg-blue-950/70 border-blue-400 text-blue-950 dark:text-blue-100 shadow-xs ring-2 ring-blue-300 dark:ring-blue-800'
                       : isIncorrectFeedback
                       ? 'bg-slate-100 dark:bg-slate-800/80 border-slate-400 text-slate-900 dark:text-slate-100 ring-2 ring-slate-300 dark:ring-slate-700'
                       : 'bg-slate-50 hover:bg-blue-50/70 dark:bg-slate-800/80 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-blue-400 text-slate-900 dark:text-white shadow-2xs hover:shadow-xs'
                   }`}
-                  title="Click to enqueue or drag into the queue chamber"
+                  title="Drag this element into the REAR slot in the Bunker Queue above"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-mono font-black text-sm flex items-center justify-center shrink-0">
+                    <div className="text-slate-400 dark:text-slate-500 shrink-0">
+                      <GripVertical className="w-4 h-4" />
+                    </div>
+                    <span className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-mono font-black text-sm flex items-center justify-center shrink-0 shadow-2xs">
                       {el}
                     </span>
                     <div className="text-left">
                       <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                        <span>Enqueue [{el}]</span>
+                        <span>Arrival [{el}]</span>
                       </div>
                       <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-                        {activeLevelId === 4 ? `Network Packet [${el}]` : `Arriving Visitor [${el}]`}
+                        {activeLevelId === 4 ? `Network Packet [${el}]` : `Arriving Survivor [${el}]`}
                       </div>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="text-[10px] uppercase font-bold text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded bg-blue-100/70 dark:bg-blue-950 border border-blue-300 dark:border-blue-800">
-                      Select →
+                    <span className="text-[10px] uppercase font-bold text-blue-700 dark:text-blue-300 px-2.5 py-1 rounded-lg bg-blue-100/70 dark:bg-blue-950 border border-blue-300 dark:border-blue-800 flex items-center gap-1">
+                      <span>Drag to REAR</span>
+                      <ArrowRight className="w-3 h-3" />
                     </span>
                   </div>
                 </div>
@@ -1165,185 +1186,90 @@ export const GameView: React.FC<GameViewProps> = ({
                 <ArrowUpRight className="w-4 h-4" />
               </div>
               <span className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                DEQUEUE FRONT OPERATION (DRAG OUT TO DELETE)
+                DEQUEUE FRONT OPERATION (DRAG OUT TO DEQUEUE)
               </span>
             </div>
             <span className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">
-              Drag FRONT element out of the box into the Exit/Trash bay to delete, or click any option
+              Drag FRONT element [0] from the Bunker Queue above into this Exit Bay (or onto the Exit Chute) to dequeue
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-stretch pt-1">
+          <div className="pt-1">
             <DequeueZone
               frontElementValue={frontValue}
               onDequeueSuccess={(val) => handleDequeue(val)}
               onDequeueInvalid={(val) => {
                 soundEffects.playError();
+                setMistakes((m) => m + 1);
                 setFeedbackStatus('incorrect');
                 setFeedbackTitle('FIFO Restriction');
-                setFeedbackActionText(`Cannot remove survivor [${val}]. Only the FRONT element may exit a Queue.`);
-                setFeedbackLifoReason('Queue elements must wait their turn. Only position [0] exits.');
+                if (val === 'enqueue_in_dequeue_zone') {
+                  setFeedbackActionText('Note: Elements can only be inserted through the REAR position! Cannot insert into the Exit/Dequeue Bay.');
+                  setFeedbackLifoReason('The Exit Bay is for departures only under FIFO rules.');
+                } else {
+                  setFeedbackActionText(`Cannot remove survivor [${val}]. Only the FRONT element may exit a Queue.`);
+                  setFeedbackLifoReason('Queue elements must wait their turn. Only position [0] exits.');
+                }
               }}
               isGuidedSolveActive={isGuidedSolveOpen}
               disabled={feedbackStatus === 'correct' || activeQueue.length === 0}
             />
-
-            <div className="flex flex-col justify-center gap-3 p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border-2 border-indigo-200 dark:border-indigo-800">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950 px-2 py-0.5 rounded border border-indigo-200 dark:border-indigo-800">
-                    INTERACTIVE DECISION
-                  </span>
-                  <span className="text-xs font-bold text-slate-900 dark:text-white">
-                    Which element should exit the queue next?
-                  </span>
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Select which element has reached the FRONT to depart under FIFO, or drag it into the Exit Bay:
-                </p>
-              </div>
-
-              {/* Dynamic Dequeue Candidate Options (Draggable & Clickable) */}
-              <div className="grid grid-cols-1 gap-2 pt-1">
-                {dequeueCandidates.map((candidate, cIdx) => (
-                  <div
-                    key={`${candidate.value}-${cIdx}`}
-                    draggable={feedbackStatus !== 'correct' && activeQueue.length > 0}
-                    onDragStart={(e) => {
-                      e.dataTransfer.setData('text/plain', String(candidate.value));
-                      e.dataTransfer.setData(
-                        'application/json',
-                        JSON.stringify({ type: 'DEQUEUE', value: candidate.value, isFront: candidate.isFront })
-                      );
-                      e.dataTransfer.effectAllowed = 'move';
-                    }}
-                    onClick={() => handleDequeue(candidate.value)}
-                    className={`w-full p-3 sm:p-3.5 rounded-xl border-2 transition-all flex items-center justify-between gap-3 text-xs sm:text-sm font-semibold select-none cursor-grab active:cursor-grabbing active:scale-[0.99] ${
-                      candidate.isFront
-                        ? 'bg-white hover:bg-indigo-50 dark:bg-slate-800 dark:hover:bg-indigo-950/40 border-slate-200 dark:border-slate-700 hover:border-indigo-400 text-slate-900 dark:text-white shadow-2xs hover:shadow-xs'
-                        : 'bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 border-slate-200 dark:border-slate-700 hover:border-slate-400 text-slate-800 dark:text-slate-200 shadow-2xs'
-                    }`}
-                    title="Click to dequeue or drag into the Exit Bay to delete"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 font-mono font-black text-sm flex items-center justify-center shrink-0">
-                        {candidate.value}
-                      </span>
-                      <div className="text-left">
-                        <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                          <span>Element [{candidate.value}]</span>
-                        </div>
-                        <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-                          {activeLevelId === 4 ? `Network Payload [${candidate.value}]` : `Queue Element [${candidate.value}]`}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className="text-[11px] uppercase font-bold text-indigo-700 dark:text-indigo-300 px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-800">
-                        Select / Drag →
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
         </div>
       )}
 
       {/* MODE: IDENTIFY FRONT / PEEK */}
       {(currentChallenge?.mode === 'identify_front' || currentChallenge?.mode === 'peek') && (
-        <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border-2 border-indigo-400/80 dark:border-indigo-600/80 shadow-md space-y-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950 px-2 py-0.5 rounded border border-indigo-200 dark:border-indigo-800">
-                INTERACTIVE IDENTIFICATION
-              </span>
-              <span className="text-xs font-bold text-slate-900 dark:text-white">
-                Which element is currently at the FRONT pointer?
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Click the element directly in the bunker visualizer above, or tap your selection below:
-            </p>
+        <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border-2 border-indigo-400/80 dark:border-indigo-600/80 shadow-md space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950 px-2 py-0.5 rounded border border-indigo-200 dark:border-indigo-800">
+              DIRECT QUEUE IDENTIFICATION
+            </span>
+            <span className="text-xs font-bold text-slate-900 dark:text-white">
+              Which element is currently at the FRONT pointer?
+            </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-            {dequeueCandidates.map((candidate, idx) => (
-              <button
-                key={`front-opt-${candidate.value}-${idx}`}
-                onClick={() => handleIdentifyFront(candidate.value)}
-                disabled={feedbackStatus === 'correct'}
-                className="p-3.5 sm:p-4 rounded-xl border-2 transition-all flex items-center justify-between gap-3 text-xs sm:text-sm font-semibold select-none cursor-pointer bg-slate-50 hover:bg-indigo-50/70 dark:bg-slate-800/80 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-indigo-400 text-slate-900 dark:text-white shadow-2xs hover:shadow-xs active:scale-[0.99]"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 font-mono font-black text-sm flex items-center justify-center shrink-0">
-                    {candidate.value}
-                  </span>
-                  <div className="text-left">
-                    <div className="font-bold text-slate-900 dark:text-white">
-                      Element [{candidate.value}]
-                    </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-                      Candidate for FRONT pointer
-                    </div>
-                  </div>
-                </div>
-
-                <span className="text-[10px] uppercase font-bold text-indigo-700 dark:text-indigo-300 px-2.5 py-1 rounded-lg bg-indigo-100/70 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-800">
-                  Select →
-                </span>
-              </button>
-            ))}
+          <div className="p-4 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 flex items-center justify-center shrink-0">
+              <Eye className="w-5 h-5 animate-pulse" />
+            </div>
+            <div>
+              <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                Tap or click the FRONT element directly inside the Bunker Queue visualizer above
+              </p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                In FIFO, the FRONT pointer points to index [0] — the element waiting longest for service.
+              </p>
+            </div>
           </div>
         </div>
       )}
 
       {/* MODE: IDENTIFY REAR */}
       {currentChallenge?.mode === 'identify_rear' && (
-        <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border-2 border-blue-400/80 dark:border-blue-600/80 shadow-md space-y-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-black uppercase tracking-wider text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800">
-                INTERACTIVE IDENTIFICATION
-              </span>
-              <span className="text-xs font-bold text-slate-900 dark:text-white">
-                Which element is currently at the REAR pointer?
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Click the element directly in the bunker visualizer above, or tap your selection below:
-            </p>
+        <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border-2 border-blue-400/80 dark:border-blue-600/80 shadow-md space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-black uppercase tracking-wider text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800">
+              DIRECT QUEUE IDENTIFICATION
+            </span>
+            <span className="text-xs font-bold text-slate-900 dark:text-white">
+              Which element is currently at the REAR pointer?
+            </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-            {dequeueCandidates.map((candidate, idx) => (
-              <button
-                key={`rear-opt-${candidate.value}-${idx}`}
-                onClick={() => handleIdentifyRear(candidate.value)}
-                disabled={feedbackStatus === 'correct'}
-                className="p-3.5 sm:p-4 rounded-xl border-2 transition-all flex items-center justify-between gap-3 text-xs sm:text-sm font-semibold select-none cursor-pointer bg-slate-50 hover:bg-blue-50/70 dark:bg-slate-800/80 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-blue-400 text-slate-900 dark:text-white shadow-2xs hover:shadow-xs active:scale-[0.99]"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-mono font-black text-sm flex items-center justify-center shrink-0">
-                    {candidate.value}
-                  </span>
-                  <div className="text-left">
-                    <div className="font-bold text-slate-900 dark:text-white">
-                      Element [{candidate.value}]
-                    </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-                      Candidate for REAR pointer
-                    </div>
-                  </div>
-                </div>
-
-                <span className="text-[10px] uppercase font-bold text-blue-700 dark:text-blue-300 px-2.5 py-1 rounded-lg bg-blue-100/70 dark:bg-blue-950 border border-blue-200 dark:border-blue-800">
-                  Select →
-                </span>
-              </button>
-            ))}
+          <div className="p-4 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 flex items-center justify-center shrink-0">
+              <LogIn className="w-5 h-5 animate-pulse" />
+            </div>
+            <div>
+              <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                Tap or click the REAR element directly inside the Bunker Queue visualizer above
+              </p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                In FIFO, the REAR pointer always tracks the newest arrival at the tail of the line.
+              </p>
+            </div>
           </div>
         </div>
       )}

@@ -209,7 +209,10 @@ export const LevelSpeedQueueInteractive: React.FC<LevelSpeedQueueInteractiveProp
               onNotifyAction?.('FIFO Violation! Only FRONT packet can be transmitted.');
             }
           }}
-          onClick={handleDispatchFront}
+          onClick={() => {
+            soundEffects.playError();
+            setLastMessage('Note: Dequeue by dragging the FRONT packet [0] out to the Transmit Antenna.');
+          }}
           className={`lg:col-span-3 rounded-2xl border-2 border-dashed p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all select-none ${
             isOverExit
               ? 'border-indigo-500 bg-indigo-100 dark:bg-indigo-950/80 text-indigo-800 dark:text-indigo-200 ring-4 ring-indigo-300 dark:ring-indigo-800 scale-102 shadow-lg'
@@ -283,6 +286,19 @@ export const LevelSpeedQueueInteractive: React.FC<LevelSpeedQueueInteractiveProp
                           e.dataTransfer.setData('text/plain', 'INVALID_PACKET');
                         }
                       }}
+                      onDragEnd={() => {}}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        soundEffects.playError();
+                        const msg = 'Note: Packet can only be inserted through the REAR position!';
+                        setLastMessage(msg);
+                        onNotifyAction?.(msg);
+                      }}
                       className={`px-3 py-2 rounded-xl border-2 font-mono flex flex-col items-center justify-center text-center shrink-0 select-none shadow-xs transition-transform ${
                         isFront
                           ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/70 text-indigo-950 dark:text-indigo-100 ring-2 ring-indigo-200 dark:ring-indigo-800 cursor-grab active:cursor-grabbing hover:scale-105'
@@ -326,7 +342,12 @@ export const LevelSpeedQueueInteractive: React.FC<LevelSpeedQueueInteractiveProp
                     JSON.stringify({ type: 'INCOMING_PACKET', packet: pkt })
                   );
                 }}
-                onClick={() => handleEnqueuePacket(pkt)}
+                onClick={() => {
+                  soundEffects.playError();
+                  const msg = 'Note: Packet can only be inserted by dragging to the REAR position!';
+                  setLastMessage(msg);
+                  onNotifyAction?.(msg);
+                }}
                 className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs flex items-center justify-between cursor-grab active:cursor-grabbing hover:border-blue-400 transition-all text-xs font-mono"
               >
                 <div>
@@ -341,7 +362,7 @@ export const LevelSpeedQueueInteractive: React.FC<LevelSpeedQueueInteractiveProp
           </div>
 
           <span className="text-[10px] text-slate-400 text-center">
-            Drag or click an incoming packet to enqueue at the REAR.
+            Drag an incoming packet to enqueue at the REAR position.
           </span>
         </div>
       </div>

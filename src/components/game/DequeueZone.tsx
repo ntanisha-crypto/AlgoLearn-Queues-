@@ -146,7 +146,7 @@ export const DequeueZone: React.FC<DequeueZoneProps> = ({
                 </span>
                 <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
                   {frontElementValue !== null
-                    ? 'Drag FRONT element here or click below'
+                    ? 'Drag FRONT element here to dequeue'
                     : 'Queue is Empty'}
                 </span>
               </div>
@@ -154,17 +154,6 @@ export const DequeueZone: React.FC<DequeueZoneProps> = ({
           )}
         </AnimatePresence>
       </div>
-
-      {/* Accessible Click-to-Dequeue Action Button */}
-      {frontElementValue !== null && !disabled && (
-        <button
-          onClick={handleClickDequeue}
-          className="w-full py-2.5 px-4 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs active:scale-[0.99]"
-        >
-          <LogOut className="w-4 h-4" />
-          <span>Click to DEQUEUE Front [{frontElementValue}]</span>
-        </button>
-      )}
     </div>
   );
 };
