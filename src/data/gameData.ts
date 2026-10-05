@@ -32,7 +32,7 @@ export const GAME_LEVELS: GameLevelConfig[] = [
           'Visitors arrive at the rollercoaster entrance: A → B → C. Now visitor [D] arrives! Click [D] to ENQUEUE them to the back of the line (REAR).',
         initialStack: ['A', 'B', 'C'],
         capacity: 5,
-        availableElements: ['D'],
+        availableElements: ['D', 'E', 'B', 'X'],
         targetValue: 'D',
         targetStack: ['A', 'B', 'C', 'D'],
         hint: {
@@ -957,7 +957,7 @@ export const GAME_LEVELS: GameLevelConfig[] = [
           'Queue contains [C, D, E] in slots [2, 3, 4]. Enqueue survivor [F] to wrap around to slot [0]!',
         initialStack: ['C', 'D', 'E'],
         capacity: 5,
-        availableElements: ['F'],
+        availableElements: ['F', 'C', 'Z', 'K'],
         targetValue: 'F',
         targetStack: ['C', 'D', 'E', 'F'],
         hint: {
@@ -1067,7 +1067,7 @@ export const GAME_LEVELS: GameLevelConfig[] = [
           'High-speed network packet arrived! Drag [PKT-101] into the FIFO buffer at the REAR to absorb the traffic burst.',
         initialStack: ['PKT-99', 'PKT-100'],
         capacity: 5,
-        availableElements: ['PKT-101'],
+        availableElements: ['PKT-101', 'PKT-105', 'PKT-99', 'PKT-404'],
         targetValue: 'PKT-101',
         targetStack: ['PKT-99', 'PKT-100', 'PKT-101'],
         hint: {
@@ -1144,7 +1144,7 @@ export const GAME_LEVELS: GameLevelConfig[] = [
           'Next packet in the stream: [PKT-102]. Ingest it into the buffer at the REAR pointer.',
         initialStack: ['PKT-100', 'PKT-101'],
         capacity: 5,
-        availableElements: ['PKT-102'],
+        availableElements: ['PKT-102', 'PKT-108', 'PKT-100', 'PKT-300'],
         targetValue: 'PKT-102',
         targetStack: ['PKT-100', 'PKT-101', 'PKT-102'],
         hint: {

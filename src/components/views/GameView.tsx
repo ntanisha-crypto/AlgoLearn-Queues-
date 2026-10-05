@@ -22,6 +22,7 @@ import { LevelPedagogicalCard } from '../game/LevelPedagogicalCard';
 import { LevelMultiQueueInteractive } from '../game/LevelMultiQueueInteractive';
 import { LevelCircularInteractive } from '../game/LevelCircularInteractive';
 import { LevelSpeedQueueInteractive } from '../game/LevelSpeedQueueInteractive';
+import { InteractiveTraceSimulator } from '../game/InteractiveTraceSimulator';
 import {
   ArrowRight,
   ArrowDownToLine,
@@ -35,6 +36,7 @@ import {
   Sparkles,
   RotateCcw,
   Zap,
+  Radio,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -75,6 +77,8 @@ export const GameView: React.FC<GameViewProps> = ({
   const [mistakes, setMistakes] = useState<number>(0);
   const [isPeeking, setIsPeeking] = useState<boolean>(false);
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
+  const [selectedEnqueueValue, setSelectedEnqueueValue] = useState<string | number | null>(null);
+  const [showLiveSandbox, setShowLiveSandbox] = useState<boolean>(false);
 
   // Immediate Action Feedback State
   const [feedbackStatus, setFeedbackStatus] = useState<'correct' | 'incorrect' | null>(null);
@@ -103,6 +107,7 @@ export const GameView: React.FC<GameViewProps> = ({
     setFeedbackLifoReason('');
     setIsPeeking(false);
     setSelectedChoiceId(null);
+    setSelectedEnqueueValue(null);
   }, []);
 
   // When active level or challenge changes, re-initialize
@@ -219,6 +224,7 @@ export const GameView: React.FC<GameViewProps> = ({
     }
 
     const isTarget = currentChallenge.targetValue === undefined || String(currentChallenge.targetValue) === String(val);
+    setSelectedEnqueueValue(val);
 
     if (isTarget) {
       soundEffects.playPush();
@@ -276,8 +282,48 @@ export const GameView: React.FC<GameViewProps> = ({
     }
   };
 
+  // Dynamic Dequeue Options based on active queue elements
+  const dequeueCandidates = React.useMemo(() => {
+    if (!activeQueue || activeQueue.length === 0) return [];
+
+    const candidates: { value: string | number; positionText: string; isFront: boolean }[] = [];
+
+    activeQueue.forEach((val, idx) => {
+      let positionText = `Position ${idx}`;
+      if (idx === 0) {
+        positionText = 'Position 0 · FRONT of the line (Earliest arrival)';
+      } else if (idx === activeQueue.length - 1) {
+        positionText = `Position ${idx} · REAR of the line (Most recent arrival)`;
+      } else {
+        positionText = `Position ${idx} · Middle of queue (Waiting in line)`;
+      }
+      candidates.push({
+        value: val,
+        positionText,
+        isFront: idx === 0,
+      });
+    });
+
+    // If activeQueue only has 1 or 2 items, provide sensible options so there are always choices
+    if (candidates.length < 3) {
+      const extraPool = ['A', 'B', 'C', 'D'];
+      for (const extra of extraPool) {
+        if (candidates.length >= 3) break;
+        if (!candidates.some((c) => String(c.value) === String(extra))) {
+          candidates.push({
+            value: extra,
+            positionText: 'Not in current queue (Already departed or outside)',
+            isFront: false,
+          });
+        }
+      }
+    }
+
+    return candidates;
+  }, [activeQueue]);
+
   // 2. DEQUEUE OPERATION
-  const handleDequeue = () => {
+  const handleDequeue = (attemptedValue?: string | number) => {
     if (activeQueue.length === 0) {
       if (currentChallenge.mode === 'underflow') {
         handleUnderflowTrigger();
@@ -292,37 +338,55 @@ export const GameView: React.FC<GameViewProps> = ({
       return;
     }
 
-    soundEffects.playPop();
-    try {
-      confetti({
-        particleCount: 35,
-        spread: 50,
-        origin: { y: 0.7 },
-      });
-    } catch {
-      // Ignore
+    const frontVal = activeQueue[0];
+    const isTarget =
+      attemptedValue === undefined ||
+      String(attemptedValue) === String(frontVal);
+
+    if (isTarget) {
+      soundEffects.playPop();
+      try {
+        confetti({
+          particleCount: 35,
+          spread: 50,
+          origin: { y: 0.7 },
+        });
+      } catch {
+        // Ignore
+      }
+
+      const nextQueue = currentChallenge.targetStack
+        ? [...currentChallenge.targetStack]
+        : activeQueue.slice(1);
+      setActiveQueue(nextQueue);
+
+      const xpReward = currentChallenge.xpReward || 35;
+      setEarnedXP(xpReward);
+      const { updated } = awardXP(
+        progress,
+        xpReward,
+        `challenge_${currentChallenge.id}_success`,
+        `Completed ${currentChallenge.question}`,
+        currentLevel.title
+      );
+      onUpdateProgress(updated);
+
+      setFeedbackStatus('correct');
+      setFeedbackTitle(currentChallenge.feedback.correctTitle);
+      setFeedbackActionText(currentChallenge.feedback.correctActionText);
+      setFeedbackLifoReason(currentChallenge.feedback.lifoReason);
+    } else {
+      soundEffects.playError();
+      setMistakes((m) => m + 1);
+      setFeedbackStatus('incorrect');
+      setFeedbackTitle(`🚨 FIFO Violation: Cannot Dequeue [${attemptedValue}]`);
+      setFeedbackActionText(
+        `You selected survivor [${attemptedValue}], which is NOT at position 0 (FRONT). In a Queue, only the FRONT element [${frontVal}] is allowed to depart first.`
+      );
+      setFeedbackLifoReason(
+        `First In, First Out (FIFO) invariant: elements must wait in line. Survivor [${attemptedValue}] cannot cut ahead of [${frontVal}].`
+      );
     }
-
-    const nextQueue = currentChallenge.targetStack
-      ? [...currentChallenge.targetStack]
-      : activeQueue.slice(1);
-    setActiveQueue(nextQueue);
-
-    const xpReward = currentChallenge.xpReward || 35;
-    setEarnedXP(xpReward);
-    const { updated } = awardXP(
-      progress,
-      xpReward,
-      `challenge_${currentChallenge.id}_success`,
-      `Completed ${currentChallenge.question}`,
-      currentLevel.title
-    );
-    onUpdateProgress(updated);
-
-    setFeedbackStatus('correct');
-    setFeedbackTitle(currentChallenge.feedback.correctTitle);
-    setFeedbackActionText(currentChallenge.feedback.correctActionText);
-    setFeedbackLifoReason(currentChallenge.feedback.lifoReason);
   };
 
   // 3. PEEK OPERATION
@@ -696,10 +760,13 @@ export const GameView: React.FC<GameViewProps> = ({
         }}
       />
 
-      {/* 2. Focused Question Card */}
+      {/* 2. Dominant, Highlighted Question Card */}
       {currentChallenge && (
         <QuestionCard
           challenge={currentChallenge}
+          levelNumber={currentLevel.levelNumber || currentLevel.id}
+          currentChallengeIndex={currentChallengeIndex}
+          totalChallenges={challenges.length}
           onOpenGuidedSolve={() => handleOpenGuidedSolve(activeLevelId)}
         />
       )}
@@ -719,20 +786,11 @@ export const GameView: React.FC<GameViewProps> = ({
         isLastChallenge={currentChallengeIndex === challenges.length - 1}
       />
 
-      {/* 3.5 INTERACTIVE PEDAGOGICAL BLUEPRINT (LEVELS 1 - 3) */}
-      {currentChallenge && (
-        <LevelPedagogicalCard
-          levelId={activeLevelId}
-          currentChallenge={currentChallenge}
-          activeQueue={activeQueue}
-          capacity={currentChallenge?.capacity || 5}
-          isPeeking={isPeeking}
-          frontValue={frontValue}
-          rearValue={rearValue}
-        />
+      {/* 3.55 DEDICATED ADVANCED ARCHITECTURE LABS (LEVELS 2, 3, 4) */}
+      {activeLevelId === 2 && currentChallenge && (
+        <InteractiveTraceSimulator challengeId={currentChallenge.id} />
       )}
 
-      {/* 3.55 DEDICATED ADVANCED ARCHITECTURE LABS (LEVELS 3, 4) */}
       {activeLevelId === 3 && (
         <div className="space-y-4">
           {currentChallengeIndex < 3 ? (
@@ -759,15 +817,44 @@ export const GameView: React.FC<GameViewProps> = ({
       )}
 
       {activeLevelId === 4 && (
-        <div className="space-y-4">
-          <LevelSpeedQueueInteractive
-            onNotifyAction={(actionText) => {
-              setFeedbackActionText(actionText);
-            }}
-            onScoreReward={(delta) => {
-              setEarnedXP((xp) => xp + delta);
-            }}
-          />
+        <div className="space-y-3">
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-cyan-500/10 to-transparent border-2 border-emerald-300 dark:border-emerald-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2">
+                <Radio className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span className="text-xs font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-200">
+                  Level 4 Telecom Network Simulator
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.2 rounded bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200 font-bold">
+                  {showLiveSandbox ? 'Live Mode Active' : 'Guided Mode'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300">
+                Solve the guided packet challenges below, or test your speed in the real-time continuous traffic engine.
+              </p>
+            </div>
+
+            <button
+              onClick={() => setShowLiveSandbox((prev) => !prev)}
+              className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wide bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-all shrink-0 active:scale-95"
+            >
+              <Zap className="w-3.5 h-3.5 fill-current" />
+              <span>{showLiveSandbox ? 'Hide Live Traffic Engine' : '⚡ Open Live Traffic Engine'}</span>
+            </button>
+          </div>
+
+          {showLiveSandbox && (
+            <div className="animate-in fade-in duration-200">
+              <LevelSpeedQueueInteractive
+                onNotifyAction={(actionText) => {
+                  setFeedbackActionText(actionText);
+                }}
+                onScoreReward={(delta) => {
+                  setEarnedXP((xp) => xp + delta);
+                }}
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -826,6 +913,7 @@ export const GameView: React.FC<GameViewProps> = ({
         <QueueVisualizer
           items={activeQueue}
           capacity={currentChallenge?.capacity || 5}
+          bunkerLabel={activeLevelId === 4 ? '📡 TELECOM PACKET FIFO BUFFER (ROUTER CACHE)' : 'BUNKER QUEUE'}
           highlightFront={currentChallenge?.mode === 'dequeue' || currentChallenge?.mode === 'peek' || isPeeking}
           highlightRear={currentChallenge?.mode === 'enqueue'}
           peekValue={isPeeking ? frontValue : null}
@@ -871,56 +959,72 @@ export const GameView: React.FC<GameViewProps> = ({
 
       {/* MODE: ENQUEUE */}
       {currentChallenge?.mode === 'enqueue' && (
-        <div className="space-y-3">
-          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                  <ArrowDownToLine className="w-4 h-4" />
-                </div>
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                  ENQUEUE REAR ARRIVALS
-                </span>
-              </div>
-              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                Click option or drag &amp; drop directly into the Bunker Queue above
+        <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border-2 border-emerald-400/80 dark:border-emerald-600/80 shadow-md space-y-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded border border-emerald-300 dark:border-emerald-800">
+                INTERACTIVE DECISION
+              </span>
+              <span className="text-xs font-bold text-slate-900 dark:text-white">
+                Which element should be enqueued next at the REAR?
               </span>
             </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Select the correct incoming arrival in chronological sequence, or drag it into the queue:
+            </p>
+          </div>
 
-            <div className="flex flex-wrap items-center gap-3">
-              {availableElements.map((el, idx) => {
-                const isTarget = currentChallenge.targetValue === undefined || String(currentChallenge.targetValue) === String(el);
-                return (
-                  <div
-                    key={`${el}-${idx}`}
-                    draggable={feedbackStatus !== 'correct'}
-                    onDragStart={(e) => {
-                      e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'ENQUEUE', value: el, index: idx }));
-                      e.dataTransfer.effectAllowed = 'copy';
-                    }}
-                    onClick={() => {
-                      if (feedbackStatus !== 'correct') {
-                        handleEnqueue(el, idx);
-                      }
-                    }}
-                    className={`px-5 py-3 rounded-xl font-mono font-black text-sm flex items-center gap-2 border-2 transition-all shadow-xs select-none ${
-                      feedbackStatus === 'correct'
-                        ? 'opacity-40 bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 cursor-not-allowed'
-                        : isTarget
-                        ? 'bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-900 dark:text-emerald-200 border-emerald-300 dark:border-emerald-700 hover:scale-102 cursor-grab active:cursor-grabbing'
-                        : 'bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700 cursor-grab active:cursor-grabbing'
-                    }`}
-                    title="Click to enqueue or drag into the queue chamber"
-                  >
-                    <ArrowDownToLine className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                    <span>ENQUEUE [{el}] AT REAR</span>
-                    <span className="text-[10px] font-sans font-bold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/80 text-emerald-800 dark:text-emerald-200 ml-1">
-                      Drag / Click
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            {availableElements.map((el, idx) => {
+              const isSelected = String(selectedEnqueueValue) === String(el);
+              const isCorrectFeedback = feedbackStatus === 'correct' && isSelected;
+              const isIncorrectFeedback = feedbackStatus === 'incorrect' && isSelected;
+
+              return (
+                <div
+                  key={`${el}-${idx}`}
+                  draggable={feedbackStatus !== 'correct'}
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'ENQUEUE', value: el, index: idx }));
+                    e.dataTransfer.effectAllowed = 'copy';
+                  }}
+                  onClick={() => {
+                    if (feedbackStatus !== 'correct') {
+                      setSelectedEnqueueValue(el);
+                      handleEnqueue(el, idx);
+                    }
+                  }}
+                  className={`p-3.5 sm:p-4 rounded-xl border-2 transition-all flex items-center justify-between gap-3 text-xs sm:text-sm font-semibold select-none cursor-pointer active:scale-[0.99] ${
+                    isCorrectFeedback
+                      ? 'bg-emerald-50 dark:bg-emerald-950/70 border-emerald-400 text-emerald-950 dark:text-emerald-100 shadow-xs ring-2 ring-emerald-300 dark:ring-emerald-800'
+                      : isIncorrectFeedback
+                      ? 'bg-red-50 dark:bg-red-950/70 border-red-400 text-red-950 dark:text-red-100 ring-2 ring-red-300 dark:ring-red-800'
+                      : 'bg-slate-50 hover:bg-emerald-50/70 dark:bg-slate-800/80 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-emerald-400 text-slate-900 dark:text-white shadow-2xs hover:shadow-xs'
+                  }`}
+                  title="Click to enqueue or drag into the queue chamber"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-mono font-black text-sm flex items-center justify-center shrink-0">
+                      {el}
+                    </span>
+                    <div className="text-left">
+                      <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                        <span>Enqueue [{el}]</span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                        {activeLevelId === 4 ? `Network Packet [${el}]` : `Arriving Visitor [${el}]`}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded bg-emerald-100/70 dark:bg-emerald-950 border border-emerald-300 dark:border-emerald-800">
+                      Select →
                     </span>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -957,30 +1061,61 @@ export const GameView: React.FC<GameViewProps> = ({
               disabled={feedbackStatus === 'correct' || activeQueue.length === 0}
             />
 
-            <div className="flex flex-col justify-center gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800">
+            <div className="flex flex-col justify-center gap-3 p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border-2 border-rose-300 dark:border-rose-800">
               <div className="space-y-1">
-                <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">
-                  Direct Dequeue Action
-                </h4>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-950 px-2 py-0.5 rounded border border-rose-300 dark:border-rose-800">
+                    INTERACTIVE DECISION
+                  </span>
+                  <span className="text-xs font-bold text-slate-900 dark:text-white">
+                    Which element should exit the queue next?
+                  </span>
+                </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {frontValue !== null
-                    ? `Survivor [${frontValue}] is at position [0] (FRONT) and is ready for departure.`
-                    : 'The queue is currently empty. Dequeue will cause Underflow.'}
+                  Select which element has reached the FRONT to depart under FIFO, or drag it from the queue into the Exit Bay:
                 </p>
               </div>
 
-              <button
-                onClick={handleDequeue}
-                disabled={feedbackStatus === 'correct' || activeQueue.length === 0}
-                className={`w-full py-3 px-4 rounded-xl font-mono font-black text-sm uppercase tracking-wide flex items-center justify-center gap-2.5 transition-all shadow-xs cursor-pointer active:scale-95 border-2 border-transparent ${
-                  feedbackStatus === 'correct' || activeQueue.length === 0
-                    ? 'opacity-40 bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-rose-600 via-rose-500 to-red-600 hover:from-rose-700 hover:to-red-700 text-white shadow-rose-500/20 hover:border-rose-300'
-                }`}
-              >
-                <ArrowUpRight className="w-4 h-4" />
-                <span>DEQUEUE FRONT {frontValue !== null ? `[${frontValue}]` : ''}</span>
-              </button>
+              {/* Dynamic Dequeue Candidate Options */}
+              <div className="grid grid-cols-1 gap-2 pt-1">
+                {dequeueCandidates.map((candidate, cIdx) => (
+                  <button
+                    key={`${candidate.value}-${cIdx}`}
+                    onClick={() => handleDequeue(candidate.value)}
+                    disabled={feedbackStatus === 'correct' || activeQueue.length === 0}
+                    className={`w-full p-3 sm:p-3.5 rounded-xl border-2 transition-all flex items-center justify-between gap-3 text-xs sm:text-sm font-semibold select-none cursor-pointer active:scale-[0.99] ${
+                      candidate.isFront
+                        ? 'bg-white hover:bg-rose-50 dark:bg-slate-800 dark:hover:bg-rose-950/40 border-slate-200 dark:border-slate-700 hover:border-rose-400 text-slate-900 dark:text-white shadow-2xs hover:shadow-xs'
+                        : 'bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 border-slate-200 dark:border-slate-700 hover:border-slate-400 text-slate-800 dark:text-slate-200 shadow-2xs'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-950 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 font-mono font-black text-sm flex items-center justify-center shrink-0">
+                        {candidate.value}
+                      </span>
+                      <div className="text-left">
+                        <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                          <span>Dequeue [{candidate.value}]</span>
+                          {candidate.isFront && (
+                            <span className="text-[9px] uppercase px-1.5 py-0.2 rounded bg-rose-100 dark:bg-rose-900/80 text-rose-800 dark:text-rose-200 font-extrabold">
+                              FRONT
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                          {candidate.positionText}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="text-[11px] uppercase font-bold text-rose-700 dark:text-rose-300 px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950 border border-rose-200 dark:border-rose-800">
+                        Choose →
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -1026,13 +1161,28 @@ export const GameView: React.FC<GameViewProps> = ({
 
       {/* MODE: MULTIPLE CHOICE (Level 1, Level 2, Level 3, Level 4) */}
       {currentChallenge?.choices && currentChallenge.choices.length > 0 && (
-        <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
-          <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border-2 border-blue-400/80 dark:border-blue-600/80 shadow-md space-y-4">
+          {/* Dominant Highlighted Question Banner inside Choice section */}
+          <div className="p-3.5 sm:p-4 rounded-xl bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-transparent border-2 border-blue-300 dark:border-blue-700 flex items-start gap-3 shadow-2xs">
+            <div className="w-8 h-8 rounded-lg bg-blue-600 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-xs mt-0.5">
+              ?
+            </div>
+            <div className="space-y-1">
+              <span className="text-[11px] font-black uppercase tracking-wider text-blue-700 dark:text-blue-300 bg-blue-100/60 dark:bg-blue-900/60 px-2 py-0.5 rounded border border-blue-300 dark:border-blue-700 inline-block">
+                QUESTION TO ANSWER:
+              </span>
+              <p className="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-snug">
+                {currentChallenge.question}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between flex-wrap gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200">
-              SELECT THE CORRECT ANSWER
+              SELECT THE CORRECT ANSWER BELOW
             </span>
-            <span className="text-[11px] text-slate-500 dark:text-slate-400">
-              Click an option OR drag and drop it into the Answer Drop Zone
+            <span className="text-[11px] font-semibold text-blue-600 dark:text-blue-400">
+              Click an option OR drag &amp; drop it into the Answer Drop Zone
             </span>
           </div>
 
@@ -1054,7 +1204,7 @@ export const GameView: React.FC<GameViewProps> = ({
                 }
               }
             }}
-            className="w-full p-3.5 rounded-xl border-2 border-dashed border-blue-300 dark:border-blue-700 bg-blue-50/60 dark:bg-blue-950/40 flex items-center justify-center gap-2 text-xs font-bold text-blue-700 dark:text-blue-300 select-none transition-colors hover:bg-blue-100/70 dark:hover:bg-blue-900/40"
+            className="w-full p-3.5 rounded-xl border-2 border-dashed border-blue-300 dark:border-blue-700 bg-blue-50/60 dark:bg-blue-950/40 flex items-center justify-center gap-2 text-xs font-bold text-blue-700 dark:text-blue-300 select-none transition-colors hover:bg-blue-100/70 dark:hover:bg-blue-900/40 cursor-pointer"
           >
             <span className="text-base">🎯</span>
             <span>Drag and drop your chosen option here (or click any option below)</span>
@@ -1065,6 +1215,9 @@ export const GameView: React.FC<GameViewProps> = ({
               const isSelected = selectedChoiceId === choice.id;
               const isCorrectFeedback = feedbackStatus === 'correct' && isSelected;
               const isIncorrectFeedback = feedbackStatus === 'incorrect' && isSelected;
+
+              // Highlight bracketed values in choice label
+              const parts = choice.label.split(/(\[[^\]]+\])/g);
 
               return (
                 <div
@@ -1079,31 +1232,45 @@ export const GameView: React.FC<GameViewProps> = ({
                       handleSelectChoice(choice);
                     }
                   }}
-                  className={`p-3.5 sm:p-4 rounded-xl text-left border-2 transition-all flex items-center justify-between gap-3 text-xs sm:text-sm font-semibold select-none ${
+                  className={`p-3.5 sm:p-4 rounded-xl text-left border-2 transition-all flex items-center justify-between gap-3 text-xs sm:text-sm font-semibold select-none cursor-pointer ${
                     isCorrectFeedback
                       ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-400 text-emerald-950 dark:text-emerald-100 shadow-xs ring-2 ring-emerald-300 dark:ring-emerald-800'
                       : isIncorrectFeedback
                       ? 'bg-red-50 dark:bg-red-950/60 border-red-400 text-red-950 dark:text-red-100'
-                      : 'bg-slate-50 dark:bg-slate-800/60 hover:bg-blue-50 dark:hover:bg-blue-950/40 border-slate-200 dark:border-slate-700 hover:border-blue-300 text-slate-800 dark:text-slate-200 cursor-grab active:cursor-grabbing hover:scale-[1.01]'
+                      : 'bg-slate-50 dark:bg-slate-800/60 hover:bg-blue-50 dark:hover:bg-blue-950/40 border-slate-200 dark:border-slate-700 hover:border-blue-400 text-slate-800 dark:text-slate-200 hover:scale-[1.01]'
                   }`}
                   title="Click option or drag into Answer Drop Zone"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="w-6 h-6 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 font-mono font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
+                    <span className="w-7 h-7 rounded-lg bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 font-mono font-black text-xs flex items-center justify-center shrink-0 shadow-2xs">
                       {String.fromCharCode(65 + idx)}
                     </span>
-                    <span>{choice.label}</span>
+                    <span className="leading-snug">
+                      {parts.map((p, pIdx) => {
+                        if (p.startsWith('[') && p.endsWith(']')) {
+                          return (
+                            <span
+                              key={pIdx}
+                              className="inline-flex items-center px-1.5 py-0.5 mx-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700 font-mono font-bold text-xs"
+                            >
+                              {p}
+                            </span>
+                          );
+                        }
+                        return p;
+                      })}
+                    </span>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
                     <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 font-normal">
                       Click / Drag
                     </span>
                     {isCorrectFeedback && (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     )}
                     {isIncorrectFeedback && (
-                      <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
+                      <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
                     )}
                   </div>
                 </div>
@@ -1113,7 +1280,7 @@ export const GameView: React.FC<GameViewProps> = ({
         </div>
       )}
 
-      {/* MODE: OVERFLOW TEST (Level 4) */}
+      {/* MODE: OVERFLOW TEST (Level 1) */}
       {currentChallenge?.mode === 'overflow' && (
         <div className="bg-amber-50/70 dark:bg-amber-950/30 p-4 sm:p-5 rounded-2xl border border-amber-200 dark:border-amber-800/80 shadow-xs space-y-3">
           <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200 font-bold text-xs uppercase tracking-wider">
@@ -1121,8 +1288,8 @@ export const GameView: React.FC<GameViewProps> = ({
             <span>QUEUE OVERFLOW SIMULATION ZONE</span>
           </div>
 
-          <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-            The bunker queue is holding 5 survivors out of 5 capacity slots (100% full). Test the software exception guardrail.
+          <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
+            The bunker queue is holding 4 survivors out of 4 capacity slots (100% full). Test the software exception guardrail.
           </p>
 
           <button
@@ -1131,12 +1298,12 @@ export const GameView: React.FC<GameViewProps> = ({
             className="px-5 py-3 rounded-xl font-mono font-black text-xs uppercase tracking-wide bg-amber-600 hover:bg-amber-700 text-white flex items-center gap-2 transition-all shadow-xs cursor-pointer active:scale-95"
           >
             <AlertTriangle className="w-4 h-4" />
-            <span>ENQUEUE SURVIVOR [F] (TRIGGER & TEST OVERFLOW)</span>
+            <span>ENQUEUE SURVIVOR [E] (TRIGGER & TEST OVERFLOW)</span>
           </button>
         </div>
       )}
 
-      {/* MODE: UNDERFLOW TEST (Level 5) */}
+      {/* MODE: UNDERFLOW TEST (Level 1) */}
       {currentChallenge?.mode === 'underflow' && (
         <div className="bg-red-50/70 dark:bg-red-950/30 p-4 sm:p-5 rounded-2xl border border-red-200 dark:border-red-800/80 shadow-xs space-y-3">
           <div className="flex items-center gap-2 text-red-900 dark:text-red-200 font-bold text-xs uppercase tracking-wider">
@@ -1144,8 +1311,8 @@ export const GameView: React.FC<GameViewProps> = ({
             <span>QUEUE UNDERFLOW SIMULATION ZONE</span>
           </div>
 
-          <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-            The bunker queue is completely empty (0 / 5 survivors). There is no element at the FRONT pointer to remove.
+          <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
+            The bunker queue is completely empty (0 / 4 survivors). There is no element at the FRONT pointer to remove.
           </p>
 
           <button
@@ -1156,6 +1323,21 @@ export const GameView: React.FC<GameViewProps> = ({
             <AlertTriangle className="w-4 h-4" />
             <span>DEQUEUE EMPTY QUEUE (TRIGGER & TEST UNDERFLOW)</span>
           </button>
+        </div>
+      )}
+
+      {/* 6. INTERACTIVE PEDAGOGICAL BLUEPRINT & CONCEPTS (LEVELS 1 - 3) */}
+      {currentChallenge && activeLevelId <= 3 && (
+        <div className="pt-2">
+          <LevelPedagogicalCard
+            levelId={activeLevelId}
+            currentChallenge={currentChallenge}
+            activeQueue={activeQueue}
+            capacity={currentChallenge?.capacity || 5}
+            isPeeking={isPeeking}
+            frontValue={frontValue}
+            rearValue={rearValue}
+          />
         </div>
       )}
     </div>

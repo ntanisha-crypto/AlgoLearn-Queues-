@@ -181,7 +181,7 @@ export const LevelMultiQueueInteractive: React.FC<LevelMultiQueueInteractiveProp
         <div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
-              Level 6 Interactive Arena
+              Level 3 Interactive Arena
             </span>
             <span className="text-xs font-mono font-bold text-slate-500 dark:text-slate-400">
               Multi-Queue Architecture

@@ -121,7 +121,7 @@ export const LevelCircularInteractive: React.FC<LevelCircularInteractiveProps> =
       <div className="flex items-center justify-between flex-wrap gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950/80 border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-mono font-bold text-xs">
-            07
+            03
           </div>
           <div>
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 flex items-center gap-2">

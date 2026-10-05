@@ -142,7 +142,7 @@ export const LevelSpeedQueueInteractive: React.FC<LevelSpeedQueueInteractiveProp
           </div>
           <div>
             <h3 className="text-sm font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
-              LEVEL 6: HIGH-THROUGHPUT PACKET DISPATCHER
+              LEVEL 4: HIGH-THROUGHPUT PACKET DISPATCHER
               <span className="text-[10px] font-mono uppercase bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full font-bold">
                 Real-Time FIFO Buffer
               </span>
