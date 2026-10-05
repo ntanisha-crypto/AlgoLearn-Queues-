@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowLeft, ArrowRight, AlertCircle, Eye, LogIn, LogOut, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, AlertCircle, Eye, LogIn, LogOut, Trash2, Sparkles } from 'lucide-react';
 import { StackItem } from '../../types';
 
 export interface QueueVisualizerItem {
@@ -20,7 +20,7 @@ interface QueueVisualizerProps {
   overflowWarning?: boolean;
   underflowWarning?: boolean;
   onDropItem?: (value: number | string) => void;
-  onDequeueFront?: () => void;
+  onDequeueFront?: (value?: number | string) => void;
   onInvalidDequeueAttempt?: (value: number | string) => void;
   onElementClick?: (value: number | string, index: number) => void;
   allowDragDequeue?: boolean;
@@ -49,6 +49,7 @@ export const QueueVisualizer: React.FC<QueueVisualizerProps> = ({
   const [inspectedIndex, setInspectedIndex] = React.useState<number | null>(null);
   const [isDraggingFront, setIsDraggingFront] = React.useState<boolean>(false);
   const [isOverExitChute, setIsOverExitChute] = React.useState<boolean>(false);
+  const [isDraggingOverChamber, setIsDraggingOverChamber] = React.useState<boolean>(false);
 
   const normalizedItems = items.map((item, idx) => {
     if (typeof item === 'object' && item !== null && 'value' in item) {
@@ -78,27 +79,34 @@ export const QueueVisualizer: React.FC<QueueVisualizerProps> = ({
     if (isTargetChamber) return;
 
     e.preventDefault();
+    e.stopPropagation();
     setIsDraggingFront(false);
     setIsOverExitChute(false);
 
-    const raw = e.dataTransfer.getData('text/plain') || e.dataTransfer.getData('application/json');
+    const raw = e.dataTransfer.getData('application/json') || e.dataTransfer.getData('text/plain');
     if (!raw) return;
 
     try {
       const parsed = JSON.parse(raw);
       if (parsed.type === 'DEQUEUE') {
         // Dragged FRONT element out of the box and dropped outside -> DEQUEUE!
-        onDequeueFront?.();
+        onDequeueFront?.(parsed.value);
         return;
       }
       if (parsed.type === 'DEQUEUE_INVALID') {
         onInvalidDequeueAttempt?.(parsed.value);
         return;
       }
+      if (parsed.type === 'ENQUEUE' || parsed.type === 'PUSH') {
+        onDropItem?.(parsed.value !== undefined ? parsed.value : parsed);
+        return;
+      }
     } catch {
       // Fallback
       if (raw === String(frontItem?.value)) {
-        onDequeueFront?.();
+        onDequeueFront?.(raw);
+      } else if (onDropItem) {
+        onDropItem(raw);
       }
     }
   };
@@ -106,21 +114,42 @@ export const QueueVisualizer: React.FC<QueueVisualizerProps> = ({
   const handleChamberDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
+    if (!isDraggingOverChamber) {
+      setIsDraggingOverChamber(true);
+    }
+  };
+
+  const handleChamberDragLeave = (e: React.DragEvent) => {
+    // Only reset if actually leaving the chamber
+    const currentTarget = e.currentTarget as HTMLElement;
+    if (!currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDraggingOverChamber(false);
+    }
   };
 
   const handleChamberDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    const data = e.dataTransfer.getData('text/plain') || e.dataTransfer.getData('application/json');
-    if (data && onDropItem) {
+    e.stopPropagation();
+    setIsDraggingOverChamber(false);
+    const data = e.dataTransfer.getData('application/json') || e.dataTransfer.getData('text/plain');
+    if (data) {
       try {
         const parsed = JSON.parse(data);
-        // If someone dropped a DEQUEUE item back into the chamber, do nothing
-        if (parsed.type === 'DEQUEUE' || parsed.type === 'DEQUEUE_INVALID') {
+        if (parsed.type === 'DEQUEUE') {
+          onDequeueFront?.(parsed.value);
           return;
         }
-        onDropItem(parsed.value !== undefined ? parsed.value : parsed);
+        if (parsed.type === 'DEQUEUE_INVALID') {
+          onInvalidDequeueAttempt?.(parsed.value);
+          return;
+        }
+        if (onDropItem) {
+          onDropItem(parsed.value !== undefined ? parsed.value : parsed);
+        }
       } catch {
-        onDropItem(data);
+        if (onDropItem) {
+          onDropItem(data);
+        }
       }
     }
   };
@@ -138,17 +167,17 @@ export const QueueVisualizer: React.FC<QueueVisualizerProps> = ({
           : ''
       }`}
     >
-      {/* Active Drag-Out Floating Guidance Pill */}
+      {/* Active Drag-Out Floating Guidance Pill (Fixed overlay so layout never shifts) */}
       <AnimatePresence>
         {isDraggingFront && (
           <motion.div
-            initial={{ opacity: 0, y: -8, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.95 }}
-            className="w-full flex items-center justify-center gap-2 py-1.5 px-4 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 text-white text-xs font-bold shadow-lg shadow-rose-500/25 animate-pulse"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            className="absolute -top-7 left-2 right-2 z-30 flex items-center justify-center gap-2 py-1.5 px-4 rounded-xl bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 text-white text-xs font-bold shadow-lg shadow-rose-500/30 animate-pulse pointer-events-none"
           >
-            <LogOut className="w-4 h-4" />
-            <span>Drop anywhere outside the queue box or onto the Exit Chute to DEQUEUE {frontItem ? `[${frontItem.value}]` : ''}!</span>
+            <Trash2 className="w-4 h-4 shrink-0" />
+            <span>Drop onto the Exit Chute / Trash Bay (or release outside) to DEQUEUE {frontItem ? `[${frontItem.value}]` : ''}!</span>
           </motion.div>
         )}
       </AnimatePresence>
@@ -196,7 +225,7 @@ export const QueueVisualizer: React.FC<QueueVisualizerProps> = ({
       <div className="w-full flex items-center justify-between px-2 text-xs font-bold">
         {/* FRONT Pointer */}
         <div className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400">
-          <LogOut className="w-4 h-4" />
+          <Trash2 className="w-4 h-4" />
           <span className="uppercase tracking-wider text-[11px]">
             FRONT {normalizedItems.length > 0 ? `[${normalizedItems[0].value}]` : '(Empty)'}
           </span>
@@ -220,15 +249,27 @@ export const QueueVisualizer: React.FC<QueueVisualizerProps> = ({
           id="dequeue-exit-chute"
           onDragOver={(e) => {
             e.preventDefault();
+            e.stopPropagation();
             e.dataTransfer.dropEffect = 'move';
-            setIsOverExitChute(true);
+            if (!isOverExitChute) setIsOverExitChute(true);
           }}
-          onDragLeave={() => setIsOverExitChute(false)}
+          onDragEnter={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!isOverExitChute) setIsOverExitChute(true);
+          }}
+          onDragLeave={(e) => {
+            const currentTarget = e.currentTarget as HTMLElement;
+            if (!currentTarget.contains(e.relatedTarget as Node)) {
+              setIsOverExitChute(false);
+            }
+          }}
           onDrop={(e) => {
             e.preventDefault();
+            e.stopPropagation();
             setIsOverExitChute(false);
             setIsDraggingFront(false);
-            const raw = e.dataTransfer.getData('text/plain') || e.dataTransfer.getData('application/json');
+            const raw = e.dataTransfer.getData('application/json') || e.dataTransfer.getData('text/plain');
             if (raw) {
               try {
                 const parsed = JSON.parse(raw);
@@ -236,29 +277,33 @@ export const QueueVisualizer: React.FC<QueueVisualizerProps> = ({
                   onInvalidDequeueAttempt?.(parsed.value);
                   return;
                 }
+                onDequeueFront?.(parsed.value);
+                return;
               } catch {}
             }
-            onDequeueFront?.();
+            onDequeueFront?.(raw);
           }}
           onClick={() => onDequeueFront?.()}
           title="Drag the FRONT element here or click to DEQUEUE"
-          className={`shrink-0 w-full sm:w-28 rounded-2xl border-2 border-dashed p-3 flex sm:flex-col items-center justify-center text-center gap-1.5 transition-all cursor-pointer select-none ${
+          className={`shrink-0 w-full sm:w-32 rounded-2xl border-2 border-dashed p-3 flex sm:flex-col items-center justify-center text-center gap-2 transition-all cursor-pointer select-none ${
             isOverExitChute
-              ? 'border-rose-500 bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-200 ring-4 ring-rose-300 dark:ring-rose-800 scale-102 shadow-md'
+              ? 'border-rose-500 bg-rose-200 dark:bg-rose-900/90 text-rose-800 dark:text-rose-100 ring-4 ring-rose-400 dark:ring-rose-700 scale-105 shadow-xl'
               : isDraggingFront
-              ? 'border-rose-400 dark:border-rose-600 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-300 animate-pulse'
+              ? 'border-rose-500 dark:border-rose-500 bg-rose-100/90 dark:bg-rose-950/70 text-rose-700 dark:text-rose-200 ring-4 ring-rose-300 dark:ring-rose-800 animate-pulse'
+              : highlightFront
+              ? 'border-rose-400 dark:border-rose-600 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-300 ring-2 ring-rose-200 dark:ring-rose-900'
               : 'border-slate-300 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-900/40 text-slate-500 dark:text-slate-400 hover:border-rose-400 hover:text-rose-600 dark:hover:border-rose-600'
           }`}
         >
-          <div className="w-8 h-8 rounded-xl bg-rose-100 dark:bg-rose-900/50 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
-            <LogOut className="w-4 h-4" />
+          <div className="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-900/60 text-rose-600 dark:text-rose-300 flex items-center justify-center shrink-0 pointer-events-none shadow-2xs">
+            <Trash2 className="w-5 h-5" />
           </div>
-          <div className="flex flex-col text-left sm:text-center">
+          <div className="flex flex-col text-left sm:text-center pointer-events-none">
             <span className="text-[10px] font-black uppercase tracking-wider text-rose-600 dark:text-rose-400">
-              Exit Chute
+              {isOverExitChute ? 'RELEASE TO DELETE' : 'EXIT / TRASH'}
             </span>
-            <span className="text-[9px] font-medium leading-tight">
-              {frontItem ? `Drop [${frontItem.value}] here to delete` : 'Empty (Underflow)'}
+            <span className="text-[9px] font-bold leading-tight text-slate-600 dark:text-slate-300">
+              {frontItem ? `Drop [${frontItem.value}] to delete` : 'Empty Queue'}
             </span>
           </div>
         </div>
@@ -267,9 +312,12 @@ export const QueueVisualizer: React.FC<QueueVisualizerProps> = ({
         <div
           id="queue-drop-target"
           onDragOver={handleChamberDragOver}
+          onDragLeave={handleChamberDragLeave}
           onDrop={handleChamberDrop}
           className={`flex-1 min-h-[170px] rounded-2xl border-2 transition-all p-3.5 flex flex-col justify-center relative overflow-hidden ${
-            overflowWarning
+            isDraggingOverChamber
+              ? 'border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/50 ring-4 ring-emerald-300 dark:ring-emerald-800 scale-[1.008] shadow-lg'
+              : overflowWarning
               ? 'border-rose-400 dark:border-rose-600 bg-rose-50/20 dark:bg-rose-950/20 ring-4 ring-rose-200 dark:ring-rose-900/50'
               : underflowWarning
               ? 'border-amber-400 dark:border-amber-600 bg-amber-50/20 dark:bg-amber-950/20 ring-4 ring-amber-200 dark:ring-amber-900/50'
@@ -286,7 +334,19 @@ export const QueueVisualizer: React.FC<QueueVisualizerProps> = ({
           </div>
 
         {isEmpty ? (
-          <div className="py-8 text-center flex flex-col items-center justify-center space-y-1.5 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl bg-white/50 dark:bg-slate-900/50">
+          <div
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'copy';
+              if (!isDraggingOverChamber) setIsDraggingOverChamber(true);
+            }}
+            onDrop={handleChamberDrop}
+            className={`py-8 text-center flex flex-col items-center justify-center space-y-1.5 border-2 border-dashed rounded-xl transition-all cursor-pointer ${
+              isDraggingOverChamber
+                ? 'border-emerald-500 bg-emerald-100/80 dark:bg-emerald-950/70 ring-4 ring-emerald-300 dark:ring-emerald-700'
+                : 'border-slate-300 dark:border-slate-700 bg-white/50 dark:bg-slate-900/50 hover:border-emerald-400'
+            }`}
+          >
             <div className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
               <AlertCircle className="w-5 h-5" />
             </div>
@@ -294,7 +354,7 @@ export const QueueVisualizer: React.FC<QueueVisualizerProps> = ({
               QUEUE IS EMPTY
             </p>
             <p className="text-xs text-slate-400 dark:text-slate-500">
-              {customEmptyMessage || 'Use ENQUEUE to add survivors at the REAR.'}
+              {customEmptyMessage || 'Drag and drop or select an element to ENQUEUE at REAR.'}
             </p>
           </div>
         ) : (
@@ -432,6 +492,42 @@ export const QueueVisualizer: React.FC<QueueVisualizerProps> = ({
                   </motion.div>
                 );
               })}
+              {/* If queue is not full, show next REAR insertion target slot */}
+              {!isFull && (
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.dataTransfer.dropEffect = 'copy';
+                    if (!isDraggingOverChamber) setIsDraggingOverChamber(true);
+                  }}
+                  onDrop={handleChamberDrop}
+                  className="flex items-center gap-2 shrink-0 cursor-pointer"
+                >
+                  {normalizedItems.length > 0 && (
+                    <div className="text-emerald-400 font-mono text-sm shrink-0 select-none">
+                      →
+                    </div>
+                  )}
+                  <div
+                    className={`relative w-16 h-20 sm:w-20 sm:h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-between p-2 font-mono text-center transition-all select-none ${
+                      isDraggingOverChamber
+                        ? 'border-emerald-500 bg-emerald-100/90 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-200 ring-4 ring-emerald-300 dark:ring-emerald-700 scale-105 animate-pulse shadow-md'
+                        : 'border-emerald-300/80 dark:border-emerald-700/60 bg-emerald-50/30 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 hover:border-emerald-400 hover:bg-emerald-50/60'
+                    }`}
+                  >
+                    <div className="w-full flex items-center justify-center text-[9px] font-black uppercase text-emerald-600 dark:text-emerald-400">
+                      REAR
+                    </div>
+                    <div className="w-8 h-8 rounded-xl bg-emerald-100/80 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 flex items-center justify-center my-auto">
+                      <LogIn className="w-4 h-4" />
+                    </div>
+                    <div className="text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase">
+                      Drop Target
+                    </div>
+                  </div>
+                </div>
+              )}
             </AnimatePresence>
           </div>
         )}

@@ -173,13 +173,23 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             '📤 Tap the Dequeue button or drag the FRONT element out of the box to serve/depart.',
         };
       case 'peek':
+      case 'identify_front':
         return {
           icon: <Eye className="w-3.5 h-3.5" />,
-          label: 'PEEK INSPECTION',
+          label: 'IDENTIFY FRONT ELEMENT',
           badgeClass:
-            'bg-indigo-50 text-indigo-800 dark:bg-indigo-950/80 dark:text-indigo-200 border-indigo-300 dark:border-indigo-700',
+            'bg-rose-50 text-rose-800 dark:bg-rose-950/80 dark:text-rose-200 border-rose-300 dark:border-rose-700',
           interactionAffordance:
-            '👀 Click Peek Front below to inspect the first element without removing it.',
+            '👀 Tap the element directly in the queue box above, or select from the candidate cards below.',
+        };
+      case 'identify_rear':
+        return {
+          icon: <Target className="w-3.5 h-3.5" />,
+          label: 'IDENTIFY REAR ELEMENT',
+          badgeClass:
+            'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-200 border-emerald-300 dark:border-emerald-700',
+          interactionAffordance:
+            '🎯 Tap the element directly in the queue box above, or select from the candidate cards below.',
         };
       case 'overflow':
         return {

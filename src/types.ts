@@ -187,6 +187,8 @@ export interface GameChallenge {
     | 'enqueue'
     | 'dequeue'
     | 'peek'
+    | 'identify_front'
+    | 'identify_rear'
     | 'overflow'
     | 'underflow'
     | 'choice'

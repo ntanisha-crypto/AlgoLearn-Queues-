@@ -18,7 +18,6 @@ import { DequeueZone } from '../game/DequeueZone';
 import { LevelCompleteModal } from '../game/LevelCompleteModal';
 import { InGameLab } from '../game/InGameLab';
 import { GuidedSolveModal } from '../game/GuidedSolveModal';
-import { LevelPedagogicalCard } from '../game/LevelPedagogicalCard';
 import { LevelMultiQueueInteractive } from '../game/LevelMultiQueueInteractive';
 import { LevelCircularInteractive } from '../game/LevelCircularInteractive';
 import { LevelSpeedQueueInteractive } from '../game/LevelSpeedQueueInteractive';
@@ -37,6 +36,9 @@ import {
   RotateCcw,
   Zap,
   Radio,
+  ChevronDown,
+  ChevronUp,
+  Trash2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -79,6 +81,7 @@ export const GameView: React.FC<GameViewProps> = ({
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
   const [selectedEnqueueValue, setSelectedEnqueueValue] = useState<string | number | null>(null);
   const [showLiveSandbox, setShowLiveSandbox] = useState<boolean>(false);
+  const [isInteractiveArenaOpen, setIsInteractiveArenaOpen] = useState<boolean>(false);
 
   // Immediate Action Feedback State
   const [feedbackStatus, setFeedbackStatus] = useState<'correct' | 'incorrect' | null>(null);
@@ -289,30 +292,22 @@ export const GameView: React.FC<GameViewProps> = ({
     const candidates: { value: string | number; positionText: string; isFront: boolean }[] = [];
 
     activeQueue.forEach((val, idx) => {
-      let positionText = `Position ${idx}`;
-      if (idx === 0) {
-        positionText = 'Position 0 · FRONT of the line (Earliest arrival)';
-      } else if (idx === activeQueue.length - 1) {
-        positionText = `Position ${idx} · REAR of the line (Most recent arrival)`;
-      } else {
-        positionText = `Position ${idx} · Middle of queue (Waiting in line)`;
-      }
       candidates.push({
         value: val,
-        positionText,
+        positionText: `Waiting in line`,
         isFront: idx === 0,
       });
     });
 
     // If activeQueue only has 1 or 2 items, provide sensible options so there are always choices
     if (candidates.length < 3) {
-      const extraPool = ['A', 'B', 'C', 'D'];
+      const extraPool = ['A', 'B', 'C', 'D', 'PKT-100', 'PKT-101'];
       for (const extra of extraPool) {
         if (candidates.length >= 3) break;
         if (!candidates.some((c) => String(c.value) === String(extra))) {
           candidates.push({
             value: extra,
-            positionText: 'Not in current queue (Already departed or outside)',
+            positionText: 'Outside queue',
             isFront: false,
           });
         }
@@ -386,6 +381,104 @@ export const GameView: React.FC<GameViewProps> = ({
       setFeedbackLifoReason(
         `First In, First Out (FIFO) invariant: elements must wait in line. Survivor [${attemptedValue}] cannot cut ahead of [${frontVal}].`
       );
+    }
+  };
+
+  // 3. IDENTIFY FRONT OPERATION
+  const handleIdentifyFront = (attemptedValue: string | number) => {
+    if (activeQueue.length === 0) return;
+    const frontVal = activeQueue[0];
+    const isTarget = String(attemptedValue) === String(frontVal);
+
+    if (isTarget) {
+      soundEffects.playSuccess();
+      try {
+        confetti({
+          particleCount: 35,
+          spread: 50,
+          origin: { y: 0.7 },
+        });
+      } catch {}
+
+      const xpReward = currentChallenge.xpReward || 35;
+      setEarnedXP(xpReward);
+      const { updated } = awardXP(
+        progress,
+        xpReward,
+        `challenge_${currentChallenge.id}_success`,
+        `Identified FRONT element [${frontVal}]`,
+        currentLevel.title
+      );
+      onUpdateProgress(updated);
+
+      setFeedbackStatus('correct');
+      setFeedbackTitle(currentChallenge.feedback?.correctTitle || `Identified FRONT Element [${frontVal}]!`);
+      setFeedbackActionText(
+        currentChallenge.feedback?.correctActionText ||
+          `Correct! Element [${frontVal}] stands at position [0] (FRONT pointer).`
+      );
+      setFeedbackLifoReason(
+        currentChallenge.feedback?.lifoReason ||
+          'In FIFO Queues, the FRONT pointer always points to index 0, the first element to arrive.'
+      );
+    } else {
+      soundEffects.playError();
+      setMistakes((m) => m + 1);
+      setFeedbackStatus('incorrect');
+      setFeedbackTitle('Incorrect FRONT Selection');
+      setFeedbackActionText(
+        `You selected [${attemptedValue}], but the element at the FRONT pointer (index 0) is [${frontVal}].`
+      );
+      setFeedbackLifoReason('The FRONT pointer always references the earliest arrival at position 0.');
+    }
+  };
+
+  // 4. IDENTIFY REAR OPERATION
+  const handleIdentifyRear = (attemptedValue: string | number) => {
+    if (activeQueue.length === 0) return;
+    const rearVal = activeQueue[activeQueue.length - 1];
+    const isTarget = String(attemptedValue) === String(rearVal);
+
+    if (isTarget) {
+      soundEffects.playSuccess();
+      try {
+        confetti({
+          particleCount: 35,
+          spread: 50,
+          origin: { y: 0.7 },
+        });
+      } catch {}
+
+      const xpReward = currentChallenge.xpReward || 35;
+      setEarnedXP(xpReward);
+      const { updated } = awardXP(
+        progress,
+        xpReward,
+        `challenge_${currentChallenge.id}_success`,
+        `Identified REAR element [${rearVal}]`,
+        currentLevel.title
+      );
+      onUpdateProgress(updated);
+
+      setFeedbackStatus('correct');
+      setFeedbackTitle(currentChallenge.feedback?.correctTitle || `Identified REAR Element [${rearVal}]!`);
+      setFeedbackActionText(
+        currentChallenge.feedback?.correctActionText ||
+          `Correct! Element [${rearVal}] stands at the REAR pointer (most recent arrival).`
+      );
+      setFeedbackLifoReason(
+        currentChallenge.feedback?.lifoReason ||
+          'In Queues, the REAR pointer always tracks the newest arrival at the end of the line.'
+      );
+    } else {
+      soundEffects.playError();
+      setMistakes((m) => m + 1);
+      setFeedbackStatus('incorrect');
+      setFeedbackTitle('Incorrect REAR Selection');
+      setFeedbackActionText(
+        `You selected [${attemptedValue}], but the element at the REAR pointer (last position) is [${rearVal}].`
+      );
+      setFeedbackLifoReason('The REAR pointer always tracks the newest arrival at the end of the line.');
     }
   };
 
@@ -786,73 +879,102 @@ export const GameView: React.FC<GameViewProps> = ({
         isLastChallenge={currentChallengeIndex === challenges.length - 1}
       />
 
-      {/* 3.55 DEDICATED ADVANCED ARCHITECTURE LABS (LEVELS 2, 3, 4) */}
-      {activeLevelId === 2 && currentChallenge && (
-        <InteractiveTraceSimulator challengeId={currentChallenge.id} />
-      )}
-
-      {activeLevelId === 3 && (
-        <div className="space-y-4">
-          {currentChallengeIndex < 3 ? (
-            <LevelMultiQueueInteractive
-              onNotifyAction={(actionText) => {
-                setFeedbackActionText(actionText);
-              }}
-              onScoreChange={(delta, lifeLost) => {
-                if (lifeLost) {
-                  setMistakes((m) => m + 1);
-                } else {
-                  setEarnedXP((xp) => xp + delta);
-                }
-              }}
-            />
-          ) : (
-            <LevelCircularInteractive
-              onNotifyAction={(actionText) => {
-                setFeedbackActionText(actionText);
-              }}
-            />
-          )}
-        </div>
-      )}
-
-      {activeLevelId === 4 && (
-        <div className="space-y-3">
-          <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-cyan-500/10 to-transparent border-2 border-emerald-300 dark:border-emerald-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-2">
-                <Radio className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                <span className="text-xs font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-200">
-                  Level 4 Telecom Network Simulator
-                </span>
-                <span className="text-[10px] font-mono px-2 py-0.2 rounded bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200 font-bold">
-                  {showLiveSandbox ? 'Live Mode Active' : 'Guided Mode'}
-                </span>
+      {/* 3.55 DEDICATED ADVANCED ARCHITECTURE LABS (LEVELS 2, 3, 4) - COLLAPSIBLE ARENA OPTION */}
+      {(activeLevelId === 2 || activeLevelId === 3 || activeLevelId === 4) && (
+        <div className="rounded-2xl border-2 border-indigo-200 dark:border-indigo-800/80 bg-gradient-to-r from-indigo-50/70 via-purple-50/40 to-blue-50/70 dark:from-indigo-950/40 dark:via-purple-950/20 dark:to-blue-950/40 p-3.5 sm:p-4 shadow-xs transition-all">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                <Zap className="w-4 h-4 fill-current" />
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-300">
-                Solve the guided packet challenges below, or test your speed in the real-time continuous traffic engine.
-              </p>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black uppercase tracking-wider text-indigo-950 dark:text-indigo-200">
+                    INTERACTIVE ARENA
+                  </span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300 font-bold border border-indigo-200 dark:border-indigo-800">
+                    {activeLevelId === 2
+                      ? 'Execution Trace Simulator'
+                      : activeLevelId === 3
+                      ? 'Multi-Station & Ring Buffer Lab'
+                      : 'Live High-Speed Traffic Engine'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                  {isInteractiveArenaOpen
+                    ? 'Interactive Arena is open. Click button to close and focus on challenges.'
+                    : 'Hands-on practice simulator available. Click button to open!'}
+                </p>
+              </div>
             </div>
 
             <button
-              onClick={() => setShowLiveSandbox((prev) => !prev)}
-              className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wide bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-all shrink-0 active:scale-95"
+              onClick={() => {
+                soundEffects.playClick();
+                setIsInteractiveArenaOpen((prev) => !prev);
+              }}
+              className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wide flex items-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95 ${
+                isInteractiveArenaOpen
+                  ? 'bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-700'
+                  : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-500/25 ring-2 ring-indigo-300 dark:ring-indigo-800'
+              }`}
             >
-              <Zap className="w-3.5 h-3.5 fill-current" />
-              <span>{showLiveSandbox ? 'Hide Live Traffic Engine' : '⚡ Open Live Traffic Engine'}</span>
+              {isInteractiveArenaOpen ? (
+                <>
+                  <ChevronUp className="w-4 h-4" />
+                  <span>Close Arena</span>
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="w-4 h-4" />
+                  <span>Open Interactive Arena</span>
+                </>
+              )}
             </button>
           </div>
 
-          {showLiveSandbox && (
-            <div className="animate-in fade-in duration-200">
-              <LevelSpeedQueueInteractive
-                onNotifyAction={(actionText) => {
-                  setFeedbackActionText(actionText);
-                }}
-                onScoreReward={(delta) => {
-                  setEarnedXP((xp) => xp + delta);
-                }}
-              />
+          {/* Collapsible Arena Body */}
+          {isInteractiveArenaOpen && (
+            <div className="pt-4 border-t border-indigo-200/80 dark:border-indigo-800/60 mt-3 animate-in fade-in slide-in-from-top-2 duration-200 space-y-4">
+              {activeLevelId === 2 && currentChallenge && (
+                <InteractiveTraceSimulator challengeId={currentChallenge.id} />
+              )}
+
+              {activeLevelId === 3 && (
+                <div className="space-y-4">
+                  {currentChallengeIndex < 3 ? (
+                    <LevelMultiQueueInteractive
+                      onNotifyAction={(actionText) => {
+                        setFeedbackActionText(actionText);
+                      }}
+                      onScoreChange={(delta, lifeLost) => {
+                        if (lifeLost) {
+                          setMistakes((m) => m + 1);
+                        } else {
+                          setEarnedXP((xp) => xp + delta);
+                        }
+                      }}
+                    />
+                  ) : (
+                    <LevelCircularInteractive
+                      onNotifyAction={(actionText) => {
+                        setFeedbackActionText(actionText);
+                      }}
+                    />
+                  )}
+                </div>
+              )}
+
+              {activeLevelId === 4 && (
+                <LevelSpeedQueueInteractive
+                  onNotifyAction={(actionText) => {
+                    setFeedbackActionText(actionText);
+                  }}
+                  onScoreReward={(delta) => {
+                    setEarnedXP((xp) => xp + delta);
+                  }}
+                />
+              )}
             </div>
           )}
         </div>
@@ -862,13 +984,13 @@ export const GameView: React.FC<GameViewProps> = ({
       <div
         onDragOver={(e) => {
           e.preventDefault();
-          e.dataTransfer.dropEffect = 'move';
+          e.dataTransfer.dropEffect = 'copy';
         }}
         onDrop={(e) => {
           const isChamberDrop = (e.target as HTMLElement)?.closest('#queue-drop-target');
           if (isChamberDrop) return;
           e.preventDefault();
-          const raw = e.dataTransfer.getData('text/plain') || e.dataTransfer.getData('application/json');
+          const raw = e.dataTransfer.getData('application/json') || e.dataTransfer.getData('text/plain');
           if (raw) {
             try {
               const parsed = JSON.parse(raw);
@@ -884,7 +1006,15 @@ export const GameView: React.FC<GameViewProps> = ({
                 setFeedbackLifoReason('In standard FIFO queues, items in the middle or rear must wait for front elements to be dequeued.');
                 return;
               }
-            } catch {}
+              if (parsed.type === 'ENQUEUE' || parsed.type === 'PUSH') {
+                handleEnqueue(parsed.value, parsed.index);
+                return;
+              }
+            } catch {
+              if (currentChallenge?.mode === 'enqueue') {
+                handleEnqueue(raw);
+              }
+            }
           }
         }}
         className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3"
@@ -921,9 +1051,9 @@ export const GameView: React.FC<GameViewProps> = ({
           overflowWarning={currentChallenge?.mode === 'overflow'}
           underflowWarning={currentChallenge?.mode === 'underflow'}
           onDropItem={(val) => handleEnqueue(val)}
-          onDequeueFront={() => {
+          onDequeueFront={(val) => {
             if (currentChallenge?.mode === 'dequeue') {
-              handleDequeue();
+              handleDequeue(val);
             } else {
               soundEffects.playClick();
             }
@@ -937,16 +1067,12 @@ export const GameView: React.FC<GameViewProps> = ({
           }}
           onElementClick={(val, index) => {
             soundEffects.playClick();
-            if (index === 0 && currentChallenge?.mode === 'dequeue') {
-              handleDequeue();
-            } else if (index === 0 && currentChallenge?.mode === 'peek') {
-              handlePeek();
-            } else if (index !== 0 && currentChallenge?.mode === 'dequeue') {
-              soundEffects.playError();
-              setFeedbackStatus('incorrect');
-              setFeedbackTitle('FIFO Order Guard');
-              setFeedbackActionText(`Survivor [${val}] is at position [${index}]. Only position [0] (FRONT) can exit.`);
-              setFeedbackLifoReason('Queue removals strictly follow First In, First Out order.');
+            if (currentChallenge?.mode === 'dequeue') {
+              handleDequeue(val);
+            } else if (currentChallenge?.mode === 'identify_front' || currentChallenge?.mode === 'peek') {
+              handleIdentifyFront(val);
+            } else if (currentChallenge?.mode === 'identify_rear') {
+              handleIdentifyRear(val);
             }
           }}
           customEmptyMessage="Bunker Queue is Empty (0 / 5). No survivors in line."
@@ -985,7 +1111,8 @@ export const GameView: React.FC<GameViewProps> = ({
                   key={`${el}-${idx}`}
                   draggable={feedbackStatus !== 'correct'}
                   onDragStart={(e) => {
-                    e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'ENQUEUE', value: el, index: idx }));
+                    e.dataTransfer.setData('text/plain', String(el));
+                    e.dataTransfer.setData('application/json', JSON.stringify({ type: 'ENQUEUE', value: el, index: idx }));
                     e.dataTransfer.effectAllowed = 'copy';
                   }}
                   onClick={() => {
@@ -1042,14 +1169,14 @@ export const GameView: React.FC<GameViewProps> = ({
               </span>
             </div>
             <span className="text-[11px] font-semibold text-rose-600 dark:text-rose-400">
-              Drag FRONT element out of the box to delete, drop onto exit zone, or click button
+              Drag FRONT element out of the box into the Exit/Trash bay to delete, or click any option
             </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-stretch pt-1">
             <DequeueZone
               frontElementValue={frontValue}
-              onDequeueSuccess={() => handleDequeue()}
+              onDequeueSuccess={(val) => handleDequeue(val)}
               onDequeueInvalid={(val) => {
                 soundEffects.playError();
                 setFeedbackStatus('incorrect');
@@ -1072,22 +1199,31 @@ export const GameView: React.FC<GameViewProps> = ({
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Select which element has reached the FRONT to depart under FIFO, or drag it from the queue into the Exit Bay:
+                  Select which element has reached the FRONT to depart under FIFO, or drag it into the Exit Bay:
                 </p>
               </div>
 
-              {/* Dynamic Dequeue Candidate Options */}
+              {/* Dynamic Dequeue Candidate Options (Draggable & Clickable) */}
               <div className="grid grid-cols-1 gap-2 pt-1">
                 {dequeueCandidates.map((candidate, cIdx) => (
-                  <button
+                  <div
                     key={`${candidate.value}-${cIdx}`}
+                    draggable={feedbackStatus !== 'correct' && activeQueue.length > 0}
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('text/plain', String(candidate.value));
+                      e.dataTransfer.setData(
+                        'application/json',
+                        JSON.stringify({ type: 'DEQUEUE', value: candidate.value, isFront: candidate.isFront })
+                      );
+                      e.dataTransfer.effectAllowed = 'move';
+                    }}
                     onClick={() => handleDequeue(candidate.value)}
-                    disabled={feedbackStatus === 'correct' || activeQueue.length === 0}
-                    className={`w-full p-3 sm:p-3.5 rounded-xl border-2 transition-all flex items-center justify-between gap-3 text-xs sm:text-sm font-semibold select-none cursor-pointer active:scale-[0.99] ${
+                    className={`w-full p-3 sm:p-3.5 rounded-xl border-2 transition-all flex items-center justify-between gap-3 text-xs sm:text-sm font-semibold select-none cursor-grab active:cursor-grabbing active:scale-[0.99] ${
                       candidate.isFront
                         ? 'bg-white hover:bg-rose-50 dark:bg-slate-800 dark:hover:bg-rose-950/40 border-slate-200 dark:border-slate-700 hover:border-rose-400 text-slate-900 dark:text-white shadow-2xs hover:shadow-xs'
                         : 'bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 border-slate-200 dark:border-slate-700 hover:border-slate-400 text-slate-800 dark:text-slate-200 shadow-2xs'
                     }`}
+                    title="Click to dequeue or drag into the Exit Bay to delete"
                   >
                     <div className="flex items-center gap-3">
                       <span className="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-950 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 font-mono font-black text-sm flex items-center justify-center shrink-0">
@@ -1095,25 +1231,20 @@ export const GameView: React.FC<GameViewProps> = ({
                       </span>
                       <div className="text-left">
                         <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                          <span>Dequeue [{candidate.value}]</span>
-                          {candidate.isFront && (
-                            <span className="text-[9px] uppercase px-1.5 py-0.2 rounded bg-rose-100 dark:bg-rose-900/80 text-rose-800 dark:text-rose-200 font-extrabold">
-                              FRONT
-                            </span>
-                          )}
+                          <span>Element [{candidate.value}]</span>
                         </div>
                         <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-                          {candidate.positionText}
+                          {activeLevelId === 4 ? `Network Payload [${candidate.value}]` : `Queue Element [${candidate.value}]`}
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0">
                       <span className="text-[11px] uppercase font-bold text-rose-700 dark:text-rose-300 px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950 border border-rose-200 dark:border-rose-800">
-                        Choose →
+                        Select / Drag →
                       </span>
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             </div>
@@ -1121,43 +1252,102 @@ export const GameView: React.FC<GameViewProps> = ({
         </div>
       )}
 
-      {/* MODE: PEEK (Level 3) */}
-      {currentChallenge?.mode === 'peek' && currentLevel.id !== 4 && (
-        <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
-          <div className="flex items-center justify-between flex-wrap gap-2">
+      {/* MODE: IDENTIFY FRONT / PEEK */}
+      {(currentChallenge?.mode === 'identify_front' || currentChallenge?.mode === 'peek') && (
+        <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border-2 border-rose-400/80 dark:border-rose-600/80 shadow-md space-y-4">
+          <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950/80 border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-                <Eye className="w-4 h-4" />
-              </div>
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                PEEK OPERATION (NON-DESTRUCTIVE)
+              <span className="text-[10px] font-black uppercase tracking-wider text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-950 px-2 py-0.5 rounded border border-rose-300 dark:border-rose-800">
+                INTERACTIVE IDENTIFICATION
+              </span>
+              <span className="text-xs font-bold text-slate-900 dark:text-white">
+                Which element is currently at the FRONT pointer?
               </span>
             </div>
-            <span className="text-[11px] font-semibold text-slate-400">
-              Inspect FRONT element without removing it
-            </span>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Click the element directly in the bunker visualizer above, or tap your selection below:
+            </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center gap-4 pt-1">
-            <button
-              onClick={handlePeek}
-              disabled={feedbackStatus === 'correct' || activeQueue.length === 0}
-              className={`w-full sm:w-auto px-6 py-3.5 rounded-xl font-mono font-black text-sm uppercase tracking-wide flex items-center justify-center gap-2.5 transition-all shadow-xs cursor-pointer active:scale-95 ${
-                feedbackStatus === 'correct'
-                  ? 'bg-emerald-600 text-white shadow-emerald-500/20'
-                  : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-500/20'
-              }`}
-            >
-              <Eye className="w-4 h-4" />
-              <span>PEEK FRONT (INSPECT WITHOUT REMOVING)</span>
-            </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            {dequeueCandidates.map((candidate, idx) => (
+              <button
+                key={`front-opt-${candidate.value}-${idx}`}
+                onClick={() => handleIdentifyFront(candidate.value)}
+                disabled={feedbackStatus === 'correct'}
+                className="p-3.5 sm:p-4 rounded-xl border-2 transition-all flex items-center justify-between gap-3 text-xs sm:text-sm font-semibold select-none cursor-pointer bg-slate-50 hover:bg-rose-50/70 dark:bg-slate-800/80 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-rose-400 text-slate-900 dark:text-white shadow-2xs hover:shadow-xs active:scale-[0.99]"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-950 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 font-mono font-black text-sm flex items-center justify-center shrink-0">
+                    {candidate.value}
+                  </span>
+                  <div className="text-left">
+                    <div className="font-bold text-slate-900 dark:text-white">
+                      Element [{candidate.value}]
+                    </div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                      Candidate for FRONT pointer
+                    </div>
+                  </div>
+                </div>
 
-            <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-              Queue size will remain <strong>{activeQueue.length} / {currentChallenge?.capacity || 5}</strong> after inspection.
-            </div>
+                <span className="text-[10px] uppercase font-bold text-rose-700 dark:text-rose-300 px-2.5 py-1 rounded-lg bg-rose-100/70 dark:bg-rose-950 border border-rose-300 dark:border-rose-800">
+                  Select →
+                </span>
+              </button>
+            ))}
           </div>
         </div>
       )}
+
+      {/* MODE: IDENTIFY REAR */}
+      {currentChallenge?.mode === 'identify_rear' && (
+        <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border-2 border-emerald-400/80 dark:border-emerald-600/80 shadow-md space-y-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded border border-emerald-300 dark:border-emerald-800">
+                INTERACTIVE IDENTIFICATION
+              </span>
+              <span className="text-xs font-bold text-slate-900 dark:text-white">
+                Which element is currently at the REAR pointer?
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Click the element directly in the bunker visualizer above, or tap your selection below:
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            {dequeueCandidates.map((candidate, idx) => (
+              <button
+                key={`rear-opt-${candidate.value}-${idx}`}
+                onClick={() => handleIdentifyRear(candidate.value)}
+                disabled={feedbackStatus === 'correct'}
+                className="p-3.5 sm:p-4 rounded-xl border-2 transition-all flex items-center justify-between gap-3 text-xs sm:text-sm font-semibold select-none cursor-pointer bg-slate-50 hover:bg-emerald-50/70 dark:bg-slate-800/80 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-emerald-400 text-slate-900 dark:text-white shadow-2xs hover:shadow-xs active:scale-[0.99]"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-mono font-black text-sm flex items-center justify-center shrink-0">
+                    {candidate.value}
+                  </span>
+                  <div className="text-left">
+                    <div className="font-bold text-slate-900 dark:text-white">
+                      Element [{candidate.value}]
+                    </div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                      Candidate for REAR pointer
+                    </div>
+                  </div>
+                </div>
+
+                <span className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-300 px-2.5 py-1 rounded-lg bg-emerald-100/70 dark:bg-emerald-950 border border-emerald-300 dark:border-emerald-800">
+                  Select →
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
 
       {/* MODE: MULTIPLE CHOICE (Level 1, Level 2, Level 3, Level 4) */}
       {currentChallenge?.choices && currentChallenge.choices.length > 0 && (
@@ -1323,21 +1513,6 @@ export const GameView: React.FC<GameViewProps> = ({
             <AlertTriangle className="w-4 h-4" />
             <span>DEQUEUE EMPTY QUEUE (TRIGGER & TEST UNDERFLOW)</span>
           </button>
-        </div>
-      )}
-
-      {/* 6. INTERACTIVE PEDAGOGICAL BLUEPRINT & CONCEPTS (LEVELS 1 - 3) */}
-      {currentChallenge && activeLevelId <= 3 && (
-        <div className="pt-2">
-          <LevelPedagogicalCard
-            levelId={activeLevelId}
-            currentChallenge={currentChallenge}
-            activeQueue={activeQueue}
-            capacity={currentChallenge?.capacity || 5}
-            isPeeking={isPeeking}
-            frontValue={frontValue}
-            rearValue={rearValue}
-          />
         </div>
       )}
     </div>

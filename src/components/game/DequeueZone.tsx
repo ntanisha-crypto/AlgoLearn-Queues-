@@ -38,10 +38,11 @@ export const DequeueZone: React.FC<DequeueZoneProps> = ({
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setDragState('idle');
     if (disabled || frontElementValue === null) return;
 
-    const data = e.dataTransfer.getData('text/plain');
+    const data = e.dataTransfer.getData('application/json') || e.dataTransfer.getData('text/plain');
     if (!data) return;
 
     try {
