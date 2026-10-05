@@ -22,6 +22,7 @@ import { LevelMultiQueueInteractive } from '../game/LevelMultiQueueInteractive';
 import { LevelCircularInteractive } from '../game/LevelCircularInteractive';
 import { LevelSpeedQueueInteractive } from '../game/LevelSpeedQueueInteractive';
 import { InteractiveTraceSimulator } from '../game/InteractiveTraceSimulator';
+import { InteractiveArena } from '../game/InteractiveArena';
 import {
   ArrowRight,
   ArrowDownToLine,
@@ -229,62 +230,70 @@ export const GameView: React.FC<GameViewProps> = ({
       return;
     }
 
-    const isTarget = currentChallenge.targetValue === undefined || String(currentChallenge.targetValue) === String(val);
     setSelectedEnqueueValue(val);
 
-    if (isTarget) {
-      soundEffects.playPush();
-      try {
-        confetti({
-          particleCount: 30,
-          spread: 45,
-          origin: { y: 0.65 },
-        });
-      } catch {
-        // Ignore
-      }
+    if (currentChallenge.mode === 'enqueue') {
+      const isTarget = currentChallenge.targetValue === undefined || String(currentChallenge.targetValue) === String(val);
 
-      const nextQueue = currentChallenge.targetStack
-        ? [...currentChallenge.targetStack]
-        : [...activeQueue, val];
-      setActiveQueue(nextQueue);
-
-      // Remove from available elements palette
-      setAvailableElements((prev) => {
-        if (itemIndex !== undefined && itemIndex >= 0 && itemIndex < prev.length) {
-          const copy = [...prev];
-          copy.splice(itemIndex, 1);
-          return copy;
+      if (isTarget) {
+        soundEffects.playPush();
+        try {
+          confetti({
+            particleCount: 30,
+            spread: 45,
+            origin: { y: 0.65 },
+          });
+        } catch {
+          // Ignore
         }
-        const idx = prev.findIndex((el) => String(el) === String(val));
-        if (idx === -1) return prev;
-        const copy = [...prev];
-        copy.splice(idx, 1);
-        return copy;
-      });
 
-      const xpReward = currentChallenge.xpReward || 30;
-      setEarnedXP(xpReward);
-      const { updated } = awardXP(
-        progress,
-        xpReward,
-        `challenge_${currentChallenge.id}_success`,
-        `Completed ${currentChallenge.question}`,
-        currentLevel.title
-      );
-      onUpdateProgress(updated);
+        const nextQueue = currentChallenge.targetStack
+          ? [...currentChallenge.targetStack]
+          : [...activeQueue, val];
+        setActiveQueue(nextQueue);
 
-      setFeedbackStatus('correct');
-      setFeedbackTitle(currentChallenge.feedback.correctTitle);
-      setFeedbackActionText(currentChallenge.feedback.correctActionText);
-      setFeedbackLifoReason(currentChallenge.feedback.lifoReason);
+        // Remove from available elements palette
+        setAvailableElements((prev) => {
+          if (itemIndex !== undefined && itemIndex >= 0 && itemIndex < prev.length) {
+            const copy = [...prev];
+            copy.splice(itemIndex, 1);
+            return copy;
+          }
+          const idx = prev.findIndex((el) => String(el) === String(val));
+          if (idx === -1) return prev;
+          const copy = [...prev];
+          copy.splice(idx, 1);
+          return copy;
+        });
+
+        const xpReward = currentChallenge.xpReward || 30;
+        setEarnedXP(xpReward);
+        const { updated } = awardXP(
+          progress,
+          xpReward,
+          `challenge_${currentChallenge.id}_success`,
+          `Completed ${currentChallenge.question}`,
+          currentLevel.title
+        );
+        onUpdateProgress(updated);
+
+        setFeedbackStatus('correct');
+        setFeedbackTitle(currentChallenge.feedback.correctTitle);
+        setFeedbackActionText(currentChallenge.feedback.correctActionText);
+        setFeedbackLifoReason(currentChallenge.feedback.lifoReason);
+      } else {
+        soundEffects.playError();
+        setMistakes((m) => m + 1);
+        setFeedbackStatus('incorrect');
+        setFeedbackTitle('Incorrect Enqueue Selection');
+        setFeedbackActionText(`The algorithm requested survivor [${currentChallenge.targetValue}], but you selected [${val}].`);
+        setFeedbackLifoReason(currentChallenge.feedback.incorrectTip);
+      }
     } else {
-      soundEffects.playError();
-      setMistakes((m) => m + 1);
-      setFeedbackStatus('incorrect');
-      setFeedbackTitle('Incorrect Enqueue Selection');
-      setFeedbackActionText(`The algorithm requested survivor [${currentChallenge.targetValue}], but you selected [${val}].`);
-      setFeedbackLifoReason(currentChallenge.feedback.incorrectTip);
+      // In interactive building / tracing modes (e.g. Level 2 Challenge 4):
+      // Element dropped at REAR inserts into the queue!
+      soundEffects.playPush();
+      setActiveQueue((prev) => [...prev, val]);
     }
   };
 
@@ -337,12 +346,29 @@ export const GameView: React.FC<GameViewProps> = ({
     }
 
     const frontVal = activeQueue[0];
-    const isTarget =
+    const isFrontElement =
       attemptedValue === undefined ||
       String(attemptedValue) === String(frontVal);
 
-    if (isTarget) {
-      soundEffects.playPop();
+    if (!isFrontElement) {
+      soundEffects.playError();
+      setMistakes((m) => m + 1);
+      setFeedbackStatus('incorrect');
+      setFeedbackTitle(`🚨 FIFO Violation: Cannot Dequeue [${attemptedValue}]`);
+      setFeedbackActionText(
+        `You selected survivor [${attemptedValue}], which is NOT at position 0 (FRONT). In a Queue, only the FRONT element [${frontVal}] is allowed to depart first.`
+      );
+      setFeedbackLifoReason(
+        `First In, First Out (FIFO) invariant: elements must wait in line. Survivor [${attemptedValue}] cannot cut ahead of [${frontVal}].`
+      );
+      return;
+    }
+
+    soundEffects.playPop();
+    const nextQueue = activeQueue.slice(1);
+    setActiveQueue(nextQueue);
+
+    if (currentChallenge.mode === 'dequeue') {
       try {
         confetti({
           particleCount: 35,
@@ -352,11 +378,6 @@ export const GameView: React.FC<GameViewProps> = ({
       } catch {
         // Ignore
       }
-
-      const nextQueue = currentChallenge.targetStack
-        ? [...currentChallenge.targetStack]
-        : activeQueue.slice(1);
-      setActiveQueue(nextQueue);
 
       const xpReward = currentChallenge.xpReward || 35;
       setEarnedXP(xpReward);
@@ -373,17 +394,6 @@ export const GameView: React.FC<GameViewProps> = ({
       setFeedbackTitle(currentChallenge.feedback.correctTitle);
       setFeedbackActionText(currentChallenge.feedback.correctActionText);
       setFeedbackLifoReason(currentChallenge.feedback.lifoReason);
-    } else {
-      soundEffects.playError();
-      setMistakes((m) => m + 1);
-      setFeedbackStatus('incorrect');
-      setFeedbackTitle(`🚨 FIFO Violation: Cannot Dequeue [${attemptedValue}]`);
-      setFeedbackActionText(
-        `You selected survivor [${attemptedValue}], which is NOT at position 0 (FRONT). In a Queue, only the FRONT element [${frontVal}] is allowed to depart first.`
-      );
-      setFeedbackLifoReason(
-        `First In, First Out (FIFO) invariant: elements must wait in line. Survivor [${attemptedValue}] cannot cut ahead of [${frontVal}].`
-      );
     }
   };
 
@@ -896,383 +906,76 @@ export const GameView: React.FC<GameViewProps> = ({
         isLastChallenge={currentChallengeIndex === challenges.length - 1}
       />
 
-      {/* 3.55 DEDICATED ADVANCED ARCHITECTURE LABS (LEVELS 2, 3, 4) - COLLAPSIBLE ARENA OPTION */}
-      {(activeLevelId === 2 || activeLevelId === 3 || activeLevelId === 4) && (
-        <div className="rounded-2xl border-2 border-indigo-200 dark:border-indigo-800/80 bg-gradient-to-r from-indigo-50/70 via-purple-50/40 to-blue-50/70 dark:from-indigo-950/40 dark:via-purple-950/20 dark:to-blue-950/40 p-3.5 sm:p-4 shadow-xs transition-all">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs shrink-0">
-                <Zap className="w-4 h-4 fill-current" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-black uppercase tracking-wider text-indigo-950 dark:text-indigo-200">
-                    INTERACTIVE ARENA
-                  </span>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300 font-bold border border-indigo-200 dark:border-indigo-800">
-                    {activeLevelId === 2
-                      ? 'Execution Trace Simulator'
-                      : activeLevelId === 3
-                      ? 'Multi-Station & Ring Buffer Lab'
-                      : 'Live High-Speed Traffic Engine'}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-                  {isInteractiveArenaOpen
-                    ? 'Interactive Arena is open. Click button to close and focus on challenges.'
-                    : 'Hands-on practice simulator available. Click button to open!'}
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={() => {
-                soundEffects.playClick();
-                setIsInteractiveArenaOpen((prev) => !prev);
-              }}
-              className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wide flex items-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95 ${
-                isInteractiveArenaOpen
-                  ? 'bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-700'
-                  : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-500/25 ring-2 ring-indigo-300 dark:ring-indigo-800'
-              }`}
-            >
-              {isInteractiveArenaOpen ? (
-                <>
-                  <ChevronUp className="w-4 h-4" />
-                  <span>Close Arena</span>
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="w-4 h-4" />
-                  <span>Open Interactive Arena</span>
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* Collapsible Arena Body */}
-          {isInteractiveArenaOpen && (
-            <div className="pt-4 border-t border-indigo-200/80 dark:border-indigo-800/60 mt-3 animate-in fade-in slide-in-from-top-2 duration-200 space-y-4">
-              {activeLevelId === 2 && currentChallenge && (
-                <InteractiveTraceSimulator challengeId={currentChallenge.id} />
-              )}
-
-              {activeLevelId === 3 && (
-                <div className="space-y-4">
-                  {currentChallengeIndex < 3 ? (
-                    <LevelMultiQueueInteractive
-                      onNotifyAction={(actionText) => {
-                        setFeedbackActionText(actionText);
-                      }}
-                      onScoreChange={(delta, lifeLost) => {
-                        if (lifeLost) {
-                          setMistakes((m) => m + 1);
-                        } else {
-                          setEarnedXP((xp) => xp + delta);
-                        }
-                      }}
-                    />
-                  ) : (
-                    <LevelCircularInteractive
-                      onNotifyAction={(actionText) => {
-                        setFeedbackActionText(actionText);
-                      }}
-                    />
-                  )}
-                </div>
-              )}
-
-              {activeLevelId === 4 && (
-                <LevelSpeedQueueInteractive
-                  onNotifyAction={(actionText) => {
-                    setFeedbackActionText(actionText);
-                  }}
-                  onScoreReward={(delta) => {
-                    setEarnedXP((xp) => xp + delta);
-                  }}
-                />
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 4. PRIMARY FIFO QUEUE VISUALIZER */}
-      <div
-        onDragOver={(e) => {
-          e.preventDefault();
-          e.dataTransfer.dropEffect = 'copy';
-        }}
-        onDrop={(e) => {
-          const isChamberDrop = (e.target as HTMLElement)?.closest('#queue-drop-target');
-          if (isChamberDrop) return;
-          e.preventDefault();
-          const raw = e.dataTransfer.getData('application/json') || e.dataTransfer.getData('text/plain');
-          if (raw) {
-            try {
-              const parsed = JSON.parse(raw);
-              if (parsed.type === 'DEQUEUE') {
-                handleDequeue();
-                return;
-              }
-              if (parsed.type === 'DEQUEUE_INVALID') {
-                soundEffects.playError();
-                setFeedbackStatus('incorrect');
-                setFeedbackTitle('FIFO Restriction');
-                setFeedbackActionText(`Cannot remove survivor [${parsed.value}]. Only the FRONT element may exit a Queue.`);
-                setFeedbackLifoReason('In standard FIFO queues, items in the middle or rear must wait for front elements to be dequeued.');
-                return;
-              }
-              if (parsed.type === 'ENQUEUE' || parsed.type === 'PUSH' || parsed.value !== undefined) {
-                handleInvalidEnqueue('Note: Element can only be inserted through the REAR position! (Cannot insert outside the queue)');
-                return;
-              }
-            } catch {
-              if (currentChallenge?.mode === 'enqueue') {
-                handleInvalidEnqueue('Note: Element can only be inserted through the REAR position!');
-              }
-            }
-          }
-        }}
-        className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3"
-      >
-        <div className="flex items-center justify-between flex-wrap gap-2 text-xs">
-          <div className="flex items-center gap-2">
-            <span className="font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-[11px]">
-              BUNKER QUEUE
-            </span>
-            <span className="font-mono font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/80 px-2 py-0.5 rounded-md border border-blue-200 dark:border-blue-800">
-              FIFO: First In → First Out
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2 font-mono text-[11px]">
-            <span className="text-slate-500 dark:text-slate-400">
-              FRONT: <strong className="text-indigo-600 dark:text-indigo-400">{frontValue !== null ? frontValue : 'None (-1)'}</strong>
-            </span>
-            <span className="text-slate-300 dark:text-slate-700">•</span>
-            <span className="text-slate-500 dark:text-slate-400">
-              REAR: <strong className="text-blue-600 dark:text-blue-400">{rearValue !== null ? rearValue : 'None (-1)'}</strong>
-            </span>
-          </div>
-        </div>
-
-        <QueueVisualizer
-          items={activeQueue}
-          capacity={currentChallenge?.capacity || 5}
-          bunkerLabel={activeLevelId === 4 ? '📡 TELECOM PACKET FIFO BUFFER (ROUTER CACHE)' : 'BUNKER QUEUE'}
-          highlightFront={currentChallenge?.mode === 'dequeue' || currentChallenge?.mode === 'peek' || isPeeking}
-          highlightRear={currentChallenge?.mode === 'enqueue'}
-          peekValue={isPeeking ? frontValue : null}
-          isPeekActive={isPeeking}
-          overflowWarning={currentChallenge?.mode === 'overflow'}
-          underflowWarning={currentChallenge?.mode === 'underflow'}
-          onDropItem={(val) => handleEnqueue(val)}
-          onInvalidEnqueueAttempt={handleInvalidEnqueue}
-          onDequeueFront={(val) => {
-            if (currentChallenge?.mode === 'dequeue') {
-              handleDequeue(val);
+      {/* 4. PRIMARY INTERACTIVE ARENA (Matching reference image) */}
+      <InteractiveArena
+        items={activeQueue}
+        capacity={currentChallenge?.capacity || 5}
+        availableElements={
+          availableElements && availableElements.length > 0
+            ? availableElements
+            : currentChallenge?.availableElements && currentChallenge.availableElements.length > 0
+            ? currentChallenge.availableElements
+            : [10, 20, 30, 40]
+        }
+        simulatorBadgeLabel={
+          activeLevelId === 2
+            ? 'Execution Trace Simulator'
+            : currentLevel.id === 3
+            ? 'Multi-Station & Ring Buffer'
+            : currentLevel.id === 4
+            ? 'Telecom FIFO Buffer'
+            : 'Execution Trace Simulator'
+        }
+        subtitle="Drag elements to FRONT or REAR to build the queue."
+        onEnqueue={(val) => handleEnqueue(val)}
+        onDequeue={(val) => handleDequeue(val)}
+        onSelectElement={(val) => {
+          if (currentChallenge?.mode === 'dequeue') {
+            handleDequeue(val);
+          } else if (
+            currentChallenge?.mode === 'identify_front' ||
+            currentChallenge?.mode === 'peek'
+          ) {
+            handleIdentifyFront(val);
+          } else if (currentChallenge?.mode === 'identify_rear') {
+            handleIdentifyRear(val);
+          } else if (currentChallenge?.mode === 'enqueue') {
+            handleEnqueue(val);
+          } else if (currentChallenge?.choices && currentChallenge.choices.length > 0) {
+            const matched = currentChallenge.choices.find(
+              (c) =>
+                String(c.label).includes(String(val)) ||
+                String(c.id).toLowerCase() === String(val).toLowerCase()
+            );
+            if (matched) {
+              handleSelectChoice(matched);
+            } else if (String(currentChallenge.targetValue) === String(val)) {
+              handleIdentifyFront(val);
             } else {
               soundEffects.playClick();
             }
-          }}
-          onInvalidDequeueAttempt={(val) => {
-            soundEffects.playError();
-            setFeedbackStatus('incorrect');
-            setFeedbackTitle('FIFO Restriction');
-            setFeedbackActionText(`Cannot remove survivor [${val}]. Only the FRONT element may exit a Queue.`);
-            setFeedbackLifoReason('In standard FIFO queues, items in the middle or rear must wait for front elements to be dequeued.');
-          }}
-          onElementClick={(val, index) => {
-            soundEffects.playClick();
-            if (currentChallenge?.mode === 'dequeue') {
-              handleDequeue(val);
-            } else if (currentChallenge?.mode === 'identify_front' || currentChallenge?.mode === 'peek') {
+          } else {
+            if (
+              currentChallenge?.targetValue !== undefined &&
+              String(currentChallenge.targetValue) === String(val)
+            ) {
               handleIdentifyFront(val);
-            } else if (currentChallenge?.mode === 'identify_rear') {
-              handleIdentifyRear(val);
+            } else {
+              handleEnqueue(val);
             }
-          }}
-          customEmptyMessage="Bunker Queue is Empty (0 / 5). No survivors in line."
-        />
-      </div>
-
-      {/* ========================================================================= */}
-      {/* 5. INTERACTIVE QUEUE CONTROLS BY MODE */}
-      {/* ========================================================================= */}
-
-      {/* MODE: ENQUEUE */}
-      {currentChallenge?.mode === 'enqueue' && (
-        <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border-2 border-blue-400/80 dark:border-blue-600/80 shadow-md space-y-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-black uppercase tracking-wider text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800">
-                INCOMING ARRIVALS BAY (DRAG & DROP TO ENQUEUE)
-              </span>
-              <span className="text-xs font-bold text-slate-900 dark:text-white">
-                Drag incoming element to the REAR position in the Bunker Queue above
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              In a FIFO Queue, elements can strictly only enter at the REAR pointer. Drag the arrival into the REAR entry slot:
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-            {availableElements.map((el, idx) => {
-              const isSelected = String(selectedEnqueueValue) === String(el);
-              const isCorrectFeedback = feedbackStatus === 'correct' && isSelected;
-              const isIncorrectFeedback = feedbackStatus === 'incorrect' && isSelected;
-
-              return (
-                <div
-                  key={`${el}-${idx}`}
-                  draggable={feedbackStatus !== 'correct'}
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData('text/plain', String(el));
-                    e.dataTransfer.setData('application/json', JSON.stringify({ type: 'ENQUEUE', value: el, index: idx }));
-                    e.dataTransfer.effectAllowed = 'copy';
-                  }}
-                  onClick={() => {
-                    if (feedbackStatus !== 'correct') {
-                      handleInvalidEnqueue('Note: Element cannot be clicked to insert. It can only be inserted by dragging to the REAR position!');
-                    }
-                  }}
-                  className={`p-3.5 sm:p-4 rounded-xl border-2 transition-all flex items-center justify-between gap-3 text-xs sm:text-sm font-semibold select-none cursor-grab active:cursor-grabbing ${
-                    isCorrectFeedback
-                      ? 'bg-blue-50 dark:bg-blue-950/70 border-blue-400 text-blue-950 dark:text-blue-100 shadow-xs ring-2 ring-blue-300 dark:ring-blue-800'
-                      : isIncorrectFeedback
-                      ? 'bg-slate-100 dark:bg-slate-800/80 border-slate-400 text-slate-900 dark:text-slate-100 ring-2 ring-slate-300 dark:ring-slate-700'
-                      : 'bg-slate-50 hover:bg-blue-50/70 dark:bg-slate-800/80 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-blue-400 text-slate-900 dark:text-white shadow-2xs hover:shadow-xs'
-                  }`}
-                  title="Drag this element into the REAR slot in the Bunker Queue above"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="text-slate-400 dark:text-slate-500 shrink-0">
-                      <GripVertical className="w-4 h-4" />
-                    </div>
-                    <span className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-mono font-black text-sm flex items-center justify-center shrink-0 shadow-2xs">
-                      {el}
-                    </span>
-                    <div className="text-left">
-                      <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                        <span>Arrival [{el}]</span>
-                      </div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-                        {activeLevelId === 4 ? `Network Packet [${el}]` : `Arriving Survivor [${el}]`}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="text-[10px] uppercase font-bold text-blue-700 dark:text-blue-300 px-2.5 py-1 rounded-lg bg-blue-100/70 dark:bg-blue-950 border border-blue-300 dark:border-blue-800 flex items-center gap-1">
-                      <span>Drag to REAR</span>
-                      <ArrowRight className="w-3 h-3" />
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* MODE: DEQUEUE */}
-      {currentChallenge?.mode === 'dequeue' && (
-        <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950/80 border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-                <ArrowUpRight className="w-4 h-4" />
-              </div>
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                DEQUEUE FRONT OPERATION (DRAG OUT TO DEQUEUE)
-              </span>
-            </div>
-            <span className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">
-              Drag FRONT element [0] from the Bunker Queue above into this Exit Bay (or onto the Exit Chute) to dequeue
-            </span>
-          </div>
-
-          <div className="pt-1">
-            <DequeueZone
-              frontElementValue={frontValue}
-              onDequeueSuccess={(val) => handleDequeue(val)}
-              onDequeueInvalid={(val) => {
-                soundEffects.playError();
-                setMistakes((m) => m + 1);
-                setFeedbackStatus('incorrect');
-                setFeedbackTitle('FIFO Restriction');
-                if (val === 'enqueue_in_dequeue_zone') {
-                  setFeedbackActionText('Note: Elements can only be inserted through the REAR position! Cannot insert into the Exit/Dequeue Bay.');
-                  setFeedbackLifoReason('The Exit Bay is for departures only under FIFO rules.');
-                } else {
-                  setFeedbackActionText(`Cannot remove survivor [${val}]. Only the FRONT element may exit a Queue.`);
-                  setFeedbackLifoReason('Queue elements must wait their turn. Only position [0] exits.');
-                }
-              }}
-              isGuidedSolveActive={isGuidedSolveOpen}
-              disabled={feedbackStatus === 'correct' || activeQueue.length === 0}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* MODE: IDENTIFY FRONT / PEEK */}
-      {(currentChallenge?.mode === 'identify_front' || currentChallenge?.mode === 'peek') && (
-        <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border-2 border-indigo-400/80 dark:border-indigo-600/80 shadow-md space-y-3">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950 px-2 py-0.5 rounded border border-indigo-200 dark:border-indigo-800">
-              DIRECT QUEUE IDENTIFICATION
-            </span>
-            <span className="text-xs font-bold text-slate-900 dark:text-white">
-              Which element is currently at the FRONT pointer?
-            </span>
-          </div>
-
-          <div className="p-4 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 flex items-center justify-center shrink-0">
-              <Eye className="w-5 h-5 animate-pulse" />
-            </div>
-            <div>
-              <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
-                Tap or click the FRONT element directly inside the Bunker Queue visualizer above
-              </p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                In FIFO, the FRONT pointer points to index [0] — the element waiting longest for service.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODE: IDENTIFY REAR */}
-      {currentChallenge?.mode === 'identify_rear' && (
-        <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border-2 border-blue-400/80 dark:border-blue-600/80 shadow-md space-y-3">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-black uppercase tracking-wider text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800">
-              DIRECT QUEUE IDENTIFICATION
-            </span>
-            <span className="text-xs font-bold text-slate-900 dark:text-white">
-              Which element is currently at the REAR pointer?
-            </span>
-          </div>
-
-          <div className="p-4 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 flex items-center justify-center shrink-0">
-              <LogIn className="w-5 h-5 animate-pulse" />
-            </div>
-            <div>
-              <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
-                Tap or click the REAR element directly inside the Bunker Queue visualizer above
-              </p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                In FIFO, the REAR pointer always tracks the newest arrival at the tail of the line.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+          }
+        }}
+        onInvalidAction={(reason) => handleInvalidEnqueue(reason)}
+        highlightFront={
+          currentChallenge?.mode === 'dequeue' ||
+          currentChallenge?.mode === 'peek' ||
+          currentChallenge?.mode === 'identify_front'
+        }
+        highlightRear={
+          currentChallenge?.mode === 'enqueue' || currentChallenge?.mode === 'identify_rear'
+        }
+        selectedElementValue={selectedEnqueueValue || selectedChoiceId}
+      />
 
 
       {/* MODE: MULTIPLE CHOICE (Level 1, Level 2, Level 3, Level 4) */}
