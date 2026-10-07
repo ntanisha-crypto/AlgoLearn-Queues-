@@ -17,7 +17,7 @@ import { GameFeedbackCard } from '../game/GameFeedbackCard';
 import { DequeueZone } from '../game/DequeueZone';
 import { LevelCompleteModal } from '../game/LevelCompleteModal';
 import { InGameLab } from '../game/InGameLab';
-import { GuidedSolveModal } from '../game/GuidedSolveModal';
+import { InlineGuidedSolveCard } from '../game/InlineGuidedSolveCard';
 import { LevelMultiQueueInteractive } from '../game/LevelMultiQueueInteractive';
 import { LevelCircularInteractive } from '../game/LevelCircularInteractive';
 import { LevelSpeedQueueInteractive } from '../game/LevelSpeedQueueInteractive';
@@ -115,6 +115,7 @@ export const GameView: React.FC<GameViewProps> = ({
     setIsPeeking(false);
     setSelectedChoiceId(null);
     setSelectedEnqueueValue(null);
+    setIsGuidedSolveOpen(false);
   }, []);
 
   // When active level or challenge changes, re-initialize
@@ -715,8 +716,50 @@ export const GameView: React.FC<GameViewProps> = ({
 
   const handleOpenGuidedSolve = (levelId?: number) => {
     soundEffects.playClick();
-    setGuidedSolveLevelId(levelId || activeLevelId);
+    const targetLvl = levelId || activeLevelId;
+    setGuidedSolveLevelId(targetLvl);
+    if (viewMode !== 'playing') {
+      handleSelectLevel(targetLvl);
+      setViewMode('playing');
+    }
     setIsGuidedSolveOpen(true);
+  };
+
+  const handleGuidedSolveFinish = () => {
+    soundEffects.playSuccess();
+    try {
+      confetti({
+        particleCount: 50,
+        spread: 60,
+        origin: { y: 0.6 },
+      });
+    } catch {
+      // Ignore
+    }
+
+    const xpReward = currentChallenge?.xpReward || 35;
+    setEarnedXP(xpReward);
+    const { updated } = awardXP(
+      progress,
+      xpReward,
+      `challenge_${currentChallenge?.id}_guided_solve`,
+      `Completed Guided Walkthrough`,
+      currentLevel.title
+    );
+    onUpdateProgress(updated);
+
+    setFeedbackStatus('correct');
+    setFeedbackTitle(currentChallenge?.feedback?.correctTitle || 'Guided Solve Completed!');
+    setFeedbackActionText(
+      currentChallenge?.feedback?.correctActionText ||
+        'The operation was successfully demonstrated on the queue.'
+    );
+    setFeedbackLifoReason(
+      currentChallenge?.feedback?.lifoReason ||
+        'FIFO ensures all queue arrivals are serviced in deterministic order.'
+    );
+
+    setIsGuidedSolveOpen(false);
   };
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -725,18 +768,6 @@ export const GameView: React.FC<GameViewProps> = ({
   if (viewMode === 'hub') {
     return (
       <div className="w-full">
-        {/* Interactive Guided Solve Modal */}
-        <GuidedSolveModal
-          isOpen={isGuidedSolveOpen}
-          levelId={guidedSolveLevelId}
-          onClose={() => setIsGuidedSolveOpen(false)}
-          onTryLevel={(lvlId) => {
-            setIsGuidedSolveOpen(false);
-            handleSelectLevel(lvlId);
-            setViewMode('playing');
-          }}
-        />
-
         <GameHub
           progress={progress}
           activeLevelId={activeLevelId}
@@ -814,17 +845,6 @@ export const GameView: React.FC<GameViewProps> = ({
 
   return (
     <div className="space-y-4 max-w-4xl mx-auto animate-in fade-in duration-200">
-      {/* Interactive Guided Solve Modal */}
-      <GuidedSolveModal
-        isOpen={isGuidedSolveOpen}
-        levelId={guidedSolveLevelId}
-        onClose={() => setIsGuidedSolveOpen(false)}
-        onTryLevel={(lvlId) => {
-          setIsGuidedSolveOpen(false);
-          handleSelectLevel(lvlId);
-        }}
-      />
-
       {/* Level Completed Celebration Modal */}
       <LevelCompleteModal
         isOpen={levelCompletedModalOpen}
@@ -880,15 +900,34 @@ export const GameView: React.FC<GameViewProps> = ({
         }}
       />
 
-      {/* 2. Dominant, Highlighted Question Card */}
-      {currentChallenge && (
-        <QuestionCard
+      {/* 2. Dominant, Highlighted Question Card OR Inline Guided Solve Card */}
+      {isGuidedSolveOpen && currentChallenge ? (
+        <InlineGuidedSolveCard
           challenge={currentChallenge}
-          levelNumber={currentLevel.levelNumber || currentLevel.id}
-          currentChallengeIndex={currentChallengeIndex}
-          totalChallenges={challenges.length}
-          onOpenGuidedSolve={() => handleOpenGuidedSolve(activeLevelId)}
+          level={currentLevel}
+          currentQueue={activeQueue}
+          onClose={() => {
+            soundEffects.playClick();
+            setIsGuidedSolveOpen(false);
+            if (currentChallenge.initialStack) {
+              setActiveQueue([...currentChallenge.initialStack]);
+            }
+          }}
+          onFinish={handleGuidedSolveFinish}
+          onUpdateQueuePreview={(previewQueue) => {
+            setActiveQueue(previewQueue);
+          }}
         />
+      ) : (
+        currentChallenge && (
+          <QuestionCard
+            challenge={currentChallenge}
+            levelNumber={currentLevel.levelNumber || currentLevel.id}
+            currentChallengeIndex={currentChallengeIndex}
+            totalChallenges={challenges.length}
+            onOpenGuidedSolve={() => handleOpenGuidedSolve(activeLevelId)}
+          />
+        )
       )}
 
       {/* 3. Game Feedback Card (Displays "WHY DID THIS HAPPEN?" upon every operation) */}
